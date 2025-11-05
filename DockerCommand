@@ -1,0 +1,17 @@
+Bygg om Docker-bilden med den nya koden:
+
+docker build -t journal-frontend:dev .
+Detta skapar en ny bild av din frontend med de senaste ändringarna.
+
+Stoppa och ta bort den gamla frontend-containern:
+
+docker stop journal-frontend
+docker rm journal-frontend
+Du måste ta bort den gamla containern innan du kan starta en ny med samma namn.
+
+Starta en ny container med den uppdaterade bilden:
+
+docker run -d --name journal-frontend \
+  --network journal-net \
+  -p 5173:80 \
+  journal-frontend:dev
