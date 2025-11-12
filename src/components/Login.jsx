@@ -1,13 +1,15 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { Link } from 'react-router-dom';
 
 export default function Login() {
+    // ✅ Alla hooks först
+    const navigate = useNavigate();
+    const { login } = useAuth();
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
-    const { login } = useAuth();
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -16,6 +18,8 @@ export default function Login() {
 
         try {
             await login(username, password);
+            // Efter lyckad login, navigera till dashboard
+            navigate('/');
         } catch (err) {
             setError(err.message || 'Inloggning misslyckades');
         } finally {
@@ -25,29 +29,45 @@ export default function Login() {
 
     return (
         <div className="login-container">
-            <h2>Logga in</h2>
-            <form onSubmit={handleSubmit}>
-                <input
-                    type="text"
-                    placeholder="Användarnamn"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    required
-                />
-                <input
-                    type="password"
-                    placeholder="Lösenord"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                />
-                {error && <p className="error">{error}</p>}
-                <button type="submit" disabled={loading}>
+            <div className="login-card">
+                <h2>Logga in</h2>
+                <form onSubmit={handleSubmit}>
+                    <div className="form-group">
+                        <label>Användarnamn</label>
+                        <input
+                            type="text"
+                            value={username}
+                            onChange={(e) => setUsername(e.target.value)}
+                            required
+                            placeholder="Ange användarnamn"
+                        />
+                    </div>
 
-                    {loading ? 'Loggar in...' : 'Logga in'}
-                </button>
-                <p>Har du inget konto? <Link to="/register">Skapa konto här</Link></p>
-            </form>
+                    <div className="form-group">
+                        <label>Lösenord</label>
+                        <input
+                            type="password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            required
+                            placeholder="Ange lösenord"
+                        />
+                    </div>
+
+                    {error && <div className="error-message">{error}</div>}
+
+                    <button type="submit" disabled={loading}>
+                        {loading ? 'Loggar in...' : 'Logga in'}
+                    </button>
+                </form>
+
+                <p className="register-link">
+                    Har du inget konto?
+                    <button onClick={() => navigate('/register')}>
+                        Registrera dig här
+                    </button>
+                </p>
+            </div>
         </div>
     );
 }
