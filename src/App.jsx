@@ -161,11 +161,24 @@ function App() {
                         </ProtectedRoute>
                     } />
 
-                    <Route path="/conditions/new" element={
-                        <ProtectedRoute roles={['DOCTOR', 'STAFF', 'ADMIN']}>
-                            <ConditionForm />
-                        </ProtectedRoute>
-                    } />
+                    <Route
+                        path="/conditions/new"
+                        element={
+                            <ProtectedRoute roles={['DOCTOR','STAFF']}>
+                                <ConditionForm />
+                            </ProtectedRoute>
+                        }
+                    />
+
+                    // Edit (:id param)
+                    <Route
+                        path="/conditions/:id/edit"
+                        element={
+                            <ProtectedRoute roles={['DOCTOR','STAFF']}>
+                                <ConditionForm />
+                            </ProtectedRoute>
+                        }
+                    />
 
                     <Route path="/observations/new" element={
                         <ProtectedRoute roles={['DOCTOR', 'STAFF', 'ADMIN']}>

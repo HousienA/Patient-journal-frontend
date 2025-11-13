@@ -9,17 +9,15 @@ export default function PatientList() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
 
-    useEffect(() => {
-        loadPatients();
-    }, []);
+    // Search state
+    const [pnr, setPnr] = useState('');
+    const [name, setName] = useState('');
 
-    const loadPatients = async () => {
+    const loadAll = async () => {
+        setError('');
+        setLoading(true);
         try {
-            setLoading(true);
             const data = await patientApi.getAll();
-            console.log('Patients from API:', data); // Debug
-
-            // Hantera olika svar-format från backend
             if (Array.isArray(data)) {
                 setPatients(data);
             } else if (data && Array.isArray(data.data)) {
@@ -35,43 +33,86 @@ export default function PatientList() {
         }
     };
 
-    if (loading) {
-        return <div className="loading">Laddar patienter...</div>;
-    }
+    const runSearch = async () => {
+        setError('');
+        setLoading(true);
+        try {
+            const data = await patientApi.searchByFields({
+                pnr: pnr.trim() || undefined,
+                name: name.trim() || undefined
+            });
+            if (Array.isArray(data)) {
+                setPatients(data);
+            } else if (data && Array.isArray(data.data)) {
+                setPatients(data.data);
+            } else {
+                setPatients([]);
+            }
+        } catch (err) {
+            console.error('Error searching patients:', err);
+            setError(err.message || 'Kunde inte söka patienter');
+        } finally {
+            setLoading(false);
+        }
+    };
 
-    if (error) {
-        return <div className="error-message">{error}</div>;
-    }
+    useEffect(() => { loadAll(); }, []);
+
+    if (loading) return <div className="loading">Laddar patienter...</div>;
+    if (error) return <div className="error-message">{error}</div>;
 
     return (
         <div className="patient-list">
             <div className="list-header">
                 <h2>Patienter ({patients.length})</h2>
-                <button
-                    onClick={() => navigate('/patients/new')}
-                    className="btn-primary"
-                >
-                    + Ny patient
-                </button>
+                <button onClick={() => navigate('new')} className="btn-primary">Ny patient</button>
+            </div>
+
+            {/* Search Bar */}
+            <div className="search-bar">
+                <div className="search-row">
+                    <input
+                        type="text"
+                        placeholder="Personnummer (YYYYMMDD-XXXX)"
+                        value={pnr}
+                        onChange={(e) => setPnr(e.target.value)}
+                        className="search-input"
+                    />
+                    <input
+                        type="text"
+                        placeholder="Namn (t.ex. Anna Andersson)"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        className="search-input"
+                    />
+                    <button onClick={runSearch} className="btn-primary">Sök</button>
+                    <button
+                        onClick={() => {
+                            setPnr('');
+                            setName('');
+                            loadAll();
+                        }}
+                        className="btn-secondary"
+                    >
+                        Rensa
+                    </button>
+                </div>
             </div>
 
             {patients.length === 0 ? (
                 <div className="empty-state">
-                    <p>Inga patienter registrerade än</p>
-                    <button
-                        onClick={() => navigate('/patients/new')}
-                        className="btn-primary"
-                    >
+                    <p>Inga patienter matchade din sökning</p>
+                    <button onClick={() => navigate('new')} className="btn-primary">
                         Skapa första patienten
                     </button>
                 </div>
             ) : (
                 <div className="patient-grid">
-                    {patients.map(patient => (
+                    {patients.map((patient) => (
                         <div
                             key={patient.id}
                             className="patient-card"
-                            onClick={() => navigate(`/patients/${patient.id}`)}
+                            onClick={() => navigate(`${patient.id}`)}
                         >
                             <div className="patient-card-header">
                                 <h3>{patient.fullName}</h3>

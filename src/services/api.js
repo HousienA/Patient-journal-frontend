@@ -61,6 +61,14 @@ export const patientApi = {
 
     delete: (id) =>
         apiFetch(`/patients/${id}`, { method: 'DELETE' }),
+
+    searchByFields: ({ pnr, name }) => {
+        const params = new URLSearchParams();
+        if (pnr) params.append('pnr', pnr);
+        if (name) params.append('name', name);
+        const qs = params.toString();
+        return apiFetch(`/patients/search${qs ? `?${qs}` : ''}`);
+    }
 };
 
 // Conditions API

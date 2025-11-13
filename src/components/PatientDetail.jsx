@@ -87,37 +87,54 @@ export default function PatientDetail() {
 
             {/* Diagnoser/Conditions */}
             <section className="info-section">
-                <div className="section-header">
-                    <h2>Diagnoser ({conditions.length})</h2>
-                    <button
-                        onClick={() => navigate(`/conditions/new?patientId=${id}`)}
-                        className="btn-primary"
-                    >
-                        + Ny diagnos
-                    </button>
-                </div>
-                {conditions.length === 0 ? (
-                    <p className="empty-text">Inga diagnoser registrerade</p>
-                ) : (
-                    <div className="card-list">
-                        {conditions.map(condition => (
-                            <div key={condition.id} className="info-card">
-                                <div className="card-header">
-                                    <h3>{condition.conditionName}</h3>
-                                    <span className={`status-badge ${condition.status.toLowerCase()}`}>
-              {condition.status === 'ACTIVE' ? 'Aktiv' : 'Avslutad'}
-            </span>
-                                </div>
-                                {condition.description && <p>{condition.description}</p>}
-                                <small>
-                                    Diagnostiserad: {condition.diagnosedDate ?
-                                    new Date(condition.diagnosedDate).toLocaleDateString('sv-SE') :
-                                    'Okänt datum'}
-                                </small>
+                <h2>Diagnoser ({conditions.length})</h2>
+                <button
+                    className="btn-primary"
+                    onClick={() => navigate(`/conditions/new?patientId=${id}`)}
+                >
+                    + Ny diagnos
+                </button>
+                <div className="card-list">
+                    {conditions.map((condition) => (
+                        <div key={condition.id} className="info-card">
+                            <div className="card-header">
+                                <h3>{condition.conditionName}</h3>
+                                <span className={`status-badge ${condition.status?.toLowerCase()}`}>
+          {condition.status === 'ACTIVE' ? 'Aktiv' : 'Avslutad'}
+        </span>
                             </div>
-                        ))}
-                    </div>
-                )}
+
+                            {condition.description && <p>{condition.description}</p>}
+                            <small>
+                                Diagnostiserad {condition.diagnosedDate ? new Date(condition.diagnosedDate).toLocaleDateString('sv-SE') : 'Okänt datum'}
+                            </small>
+
+                            <div className="card-actions" style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                                <button
+                                    className="btn-secondary"
+                                    onClick={() => navigate(`/conditions/${condition.id}/edit`)}
+                                >
+                                    Redigera
+                                </button>
+                                <button
+                                    className="btn-danger"
+                                    onClick={async () => {
+                                        if (!window.confirm('Vill du ta bort denna diagnos?')) return;
+                                        try {
+                                            await conditionApi.delete(condition.id);
+                                            const updated = await conditionApi.getByPatientId(id);
+                                            setConditions(Array.isArray(updated) ? updated : []);
+                                        } catch (err) {
+                                            alert(err.message || 'Kunde inte ta bort diagnos');
+                                        }
+                                    }}
+                                >
+                                    Ta bort
+                                </button>
+                            </div>
+                        </div>
+                    ))}
+                </div>
             </section>
 
             {/* Vårdmöten */}
