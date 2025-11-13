@@ -136,14 +136,21 @@ export default function PatientDetail() {
                 ) : (
                     <div className="card-list">
                         {encounters.map(encounter => (
-                            <div key={encounter.id} className="info-card">
+                            <div
+                                key={encounter.id}
+                                className="info-card encounter-clickable"
+                                onClick={() => navigate(`/encounters/${encounter.id}`)}
+                            >
                                 <div className="card-header">
                                     <h3>{encounter.diagnosis || 'Ingen diagnos angiven'}</h3>
                                     <span className="date-badge">
-                    {new Date(encounter.encounterDate).toLocaleDateString('sv-SE')}
-                  </span>
+              {new Date(encounter.encounterDate).toLocaleDateString('sv-SE')}
+            </span>
                                 </div>
                                 {encounter.notes && <p>{encounter.notes}</p>}
+                                <div className="encounter-hint">
+                                    Klicka för att se detaljer och mätningar
+                                </div>
                             </div>
                         ))}
                     </div>

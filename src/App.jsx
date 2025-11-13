@@ -9,6 +9,9 @@ import EncounterForm from "./components/EncounterForm.jsx";
 import MessageCenter from "./components/MessageCenter.jsx";
 import ConditionForm from "./components/ConditionForm.jsx";
 import Register from "./components/Register.jsx";
+import ObservationForm from "./components/ObservationForm.jsx";
+import EncounterDetail from './components/EncounterDetail';
+
 
 
 function ProtectedRoute({ children, roles = null }) {
@@ -139,6 +142,12 @@ function App() {
                         </ProtectedRoute>
                     } />
 
+                    <Route path="/encounters/:id" element={
+                        <ProtectedRoute roles={['DOCTOR', 'STAFF', 'ADMIN']}>
+                            <EncounterDetail />
+                        </ProtectedRoute>
+                    } />
+
                     <Route path="/encounters/new" element={
                         <ProtectedRoute roles={['DOCTOR', 'STAFF', 'ADMIN']}>
                             <EncounterForm />
@@ -154,6 +163,18 @@ function App() {
                     <Route path="/conditions/new" element={
                         <ProtectedRoute roles={['DOCTOR', 'STAFF', 'ADMIN']}>
                             <ConditionForm />
+                        </ProtectedRoute>
+                    } />
+
+                    <Route path="/observations/new" element={
+                        <ProtectedRoute roles={['DOCTOR', 'STAFF', 'ADMIN']}>
+                            <ObservationForm />
+                        </ProtectedRoute>
+                    } />
+
+                    <Route path="/observations/:id/edit" element={
+                        <ProtectedRoute roles={['DOCTOR', 'STAFF', 'ADMIN']}>
+                            <ObservationForm />
                         </ProtectedRoute>
                     } />
 
