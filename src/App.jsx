@@ -11,6 +11,8 @@ import ConditionForm from "./components/ConditionForm.jsx";
 import Register from "./components/Register.jsx";
 import ObservationForm from "./components/ObservationForm.jsx";
 import EncounterDetail from './components/EncounterDetail';
+import MessageThread from "./components/MessageThread.jsx";
+import MyHealthDashboard from "./components/MyHealthDashboard.jsx";
 
 
 
@@ -103,8 +105,7 @@ function App() {
 
                     {user.role === 'PATIENT' && (
                         <>
-                            <Link to="/my-info">Min information</Link>
-                            <Link to="/my-encounters">Mina besök</Link>
+                            <Link to="/my-health">Min information</Link>
                         </>
                     )}
 
@@ -175,6 +176,18 @@ function App() {
                     <Route path="/observations/:id/edit" element={
                         <ProtectedRoute roles={['DOCTOR', 'STAFF', 'ADMIN']}>
                             <ObservationForm />
+                        </ProtectedRoute>
+                    } />
+
+                    <Route path="/messages/:id" element={
+                        <ProtectedRoute>
+                            <MessageThread />
+                        </ProtectedRoute>
+                    } />
+
+                    <Route path="/my-health" element={
+                        <ProtectedRoute roles={['PATIENT']}>
+                            <MyHealthDashboard />
                         </ProtectedRoute>
                     } />
 
