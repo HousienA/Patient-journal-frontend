@@ -1,20 +1,24 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { messageApi, patientApi } from '../services/api';
+import { messageApi, patientApi, practitionerApi } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
-//import './MessageCenter.css';
+// import './MessageCenter.css';
 
 export default function MessageCenter() {
     const { user } = useAuth();
     const navigate = useNavigate();
+
     const [messages, setMessages] = useState([]);
     const [showNewMessage, setShowNewMessage] = useState(false);
     const [newMessage, setNewMessage] = useState({
         patientId: '',
         subject: '',
-        content: ''
+        content: '',
+        receiverPractitionerId: '',
     });
+
     const [myPatientId, setMyPatientId] = useState(null);
+    const [practitioners, setPractitioners] = useState([]);
     const [loading, setLoading] = useState(true);
     const [sending, setSending] = useState(false);
     const [error, setError] = useState('');
@@ -26,19 +30,28 @@ export default function MessageCenter() {
     const loadData = async () => {
         try {
             setLoading(true);
+            setError('');
 
-            // Om patient, hitta mitt patient-ID först
+            // find own patient id and load only own messages
             if (user.role === 'PATIENT') {
                 const allPatients = await patientApi.getAll();
-                const myPatient = allPatients.find(p => p.userId === user.id);
+                const myPatient = Array.isArray(allPatients)
+                    ? allPatients.find((p) => p.userId === user.id)
+                    : null;
+
                 if (myPatient) {
                     setMyPatientId(myPatient.id);
-                    // Ladda mina meddelanden
                     const myMessages = await messageApi.getByPatientId(myPatient.id);
                     setMessages(Array.isArray(myMessages) ? myMessages : []);
+                } else {
+                    setMessages([]);
                 }
+
+                // load practitioners for receiver dropdown
+                const practitionerList = await practitionerApi.getAll();
+                setPractitioners(Array.isArray(practitionerList) ? practitionerList : []);
             } else {
-                // DOCTOR/STAFF ser alla meddelanden
+                // DOCTOR / STAFF see all messages
                 const data = await messageApi.getAll();
                 setMessages(Array.isArray(data) ? data : []);
             }
@@ -56,23 +69,57 @@ export default function MessageCenter() {
         setSending(true);
 
         try {
-            // Om patient, använd mitt eget patient-ID
-            const patientIdToUse = user.role === 'PATIENT'
-                ? myPatientId
-                : parseInt(newMessage.patientId);
+            // Use own patientId
+            const patientIdToUse =
+                user.role === 'PATIENT' ? myPatientId : parseInt(newMessage.patientId, 10);
 
+            if (!patientIdToUse || Number.isNaN(patientIdToUse)) {
+                setError('Patient-ID måste anges');
+                return;
+            }
+
+            if (!newMessage.subject.trim()) {
+                setError('Ämne får inte vara tomt');
+                return;
+            }
+            if (!newMessage.content.trim()) {
+                setError('Meddelande får inte vara tomt');
+                return;
+            }
+
+            // For patients: receiver selection for doctor
+            let subjectToSend = newMessage.subject.trim();
+            if (user.role === 'PATIENT') {
+                if (!newMessage.receiverPractitionerId) {
+                    setError('Du måste välja vilken läkare du vill skicka till');
+                    return;
+                }
+                const receiver = practitioners.find(
+                    (p) => p.id === Number.parseInt(newMessage.receiverPractitionerId, 10)
+                );
+                const receiverName = receiver?.fullName || 'okänd läkare';
+                subjectToSend = `Till ${receiverName}: ${subjectToSend}`;
+            }
+
+            // Payload exactly as backend MessageDTO expects
             await messageApi.create({
                 patientId: patientIdToUse,
-                subject: newMessage.subject,
-                content: newMessage.content,
+                subject: subjectToSend,
+                content: newMessage.content.trim(),
                 senderName: user.username,
                 sentAt: new Date().toISOString(),
-                isRead: false
+                isRead: false,
             });
 
-            setNewMessage({ patientId: '', subject: '', content: '' });
+            // Reset form and reload list
+            setNewMessage({
+                patientId: '',
+                subject: '',
+                content: '',
+                receiverPractitionerId: '',
+            });
             setShowNewMessage(false);
-            loadData();
+            await loadData();
         } catch (err) {
             console.error('Error sending message:', err);
             setError(err.message || 'Kunde inte skicka meddelande');
@@ -85,26 +132,25 @@ export default function MessageCenter() {
         return <div className="loading">Laddar meddelanden...</div>;
     }
 
-    const unreadCount = messages.filter(m => !m.isRead).length;
+    const unreadCount = messages.filter((m) => !m.isRead).length;
 
     return (
         <div className="message-center">
             <div className="message-header">
                 <h1>
-                    Meddelanden
+                    Meddelanden{' '}
                     {unreadCount > 0 && <span className="unread-count">{unreadCount} nya</span>}
                 </h1>
                 <button
                     onClick={() => setShowNewMessage(!showNewMessage)}
                     className="btn-primary"
                 >
-                    {showNewMessage ? '✕ Stäng' : '+ Nytt meddelande'}
+                    {showNewMessage ? 'Stäng' : 'Nytt meddelande'}
                 </button>
             </div>
 
             {error && <div className="error-message">{error}</div>}
 
-            {/* Formulär för nytt meddelande */}
             {showNewMessage && (
                 <div className="new-message-form">
                     <h2>
@@ -112,15 +158,45 @@ export default function MessageCenter() {
                             ? 'Skicka meddelande till vårdpersonalen'
                             : 'Skicka meddelande till patient'}
                     </h2>
+
                     <form onSubmit={handleSend}>
-                        {/* Bara DOCTOR/STAFF behöver ange patient-ID */}
+                        {/* receiver selection for patients */}
+                        {user.role === 'PATIENT' && (
+                            <div className="form-group">
+                                <label htmlFor="receiver">
+                                    Välj läkare/praktiker <span className="required">*</span>
+                                </label>
+                                <select
+                                    id="receiver"
+                                    value={newMessage.receiverPractitionerId}
+                                    onChange={(e) =>
+                                        setNewMessage({
+                                            ...newMessage,
+                                            receiverPractitionerId: e.target.value,
+                                        })
+                                    }
+                                    required
+                                >
+                                    <option value="">-- Välj mottagare --</option>
+                                    {practitioners.map((p) => (
+                                        <option key={p.id} value={p.id}>
+                                            {p.fullName} ({p.email || 'ingen e-post'})
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                        )}
+
+                        {/* Only DOCTOR/STAFF/ADMIN need to type patientId */}
                         {user.role !== 'PATIENT' && (
                             <div className="form-group">
-                                <label>Patient-ID *</label>
+                                <label>Patient-ID</label>
                                 <input
                                     type="number"
                                     value={newMessage.patientId}
-                                    onChange={(e) => setNewMessage({...newMessage, patientId: e.target.value})}
+                                    onChange={(e) =>
+                                        setNewMessage({ ...newMessage, patientId: e.target.value })
+                                    }
                                     placeholder="ID för patienten"
                                     required
                                 />
@@ -128,23 +204,27 @@ export default function MessageCenter() {
                         )}
 
                         <div className="form-group">
-                            <label>Ämne *</label>
+                            <label>Ämne</label>
                             <input
                                 type="text"
                                 value={newMessage.subject}
-                                onChange={(e) => setNewMessage({...newMessage, subject: e.target.value})}
+                                onChange={(e) =>
+                                    setNewMessage({ ...newMessage, subject: e.target.value })
+                                }
                                 placeholder="T.ex. Fråga om recept, Provsvar..."
                                 required
                             />
                         </div>
 
                         <div className="form-group">
-                            <label>Meddelande *</label>
+                            <label>Meddelande</label>
                             <textarea
                                 value={newMessage.content}
-                                onChange={(e) => setNewMessage({...newMessage, content: e.target.value})}
+                                onChange={(e) =>
+                                    setNewMessage({ ...newMessage, content: e.target.value })
+                                }
                                 placeholder="Skriv ditt meddelande här..."
-                                rows="6"
+                                rows={6}
                                 required
                             />
                         </div>
@@ -155,7 +235,6 @@ export default function MessageCenter() {
                     </form>
                 </div>
             )}
-
             {/* Lista meddelanden */}
             <div className="message-list">
                 <h2>
@@ -177,6 +256,8 @@ export default function MessageCenter() {
                                 <div
                                     key={msg.id}
                                     className={`message-card ${!msg.isRead ? 'unread' : ''}`}
+                                    style={{marginBottom: '16px', cursor: 'pointer'}}
+
                                     onClick={() => navigate(`/messages/${msg.id}`)}
                                 >
                                     <div className="message-header-card">
@@ -192,8 +273,8 @@ export default function MessageCenter() {
                                     <div className="message-footer">
                   <span className="sender">
                     {user.role === 'PATIENT' && msg.senderName === user.username
-                        ? '🔵 Du'
-                        : `Från: ${msg.senderName}`}
+                        ? '🔵 Du, '
+                        : `Från: ${msg.senderName}, `}
                   </span>
                                         <span className="date">
                     {new Date(msg.sentAt).toLocaleDateString('sv-SE', {

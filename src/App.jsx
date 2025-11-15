@@ -13,6 +13,7 @@ import ObservationForm from "./components/ObservationForm.jsx";
 import EncounterDetail from './components/EncounterDetail';
 import MessageThread from "./components/MessageThread.jsx";
 import MyHealthDashboard from "./components/MyHealthDashboard.jsx";
+import AdminPanel from "./components/AdminPanel.jsx";
 
 
 
@@ -103,6 +104,9 @@ function App() {
                         </>
                     )}
 
+                    {user.role === 'STAFF' && <Link to="/admin">Admin</Link>}
+
+
                     {user.role === 'PATIENT' && (
                         <>
                             <Link to="/my-health">Min information</Link>
@@ -132,7 +136,7 @@ function App() {
                     } />
 
                     <Route path="/patients/new" element={
-                        <ProtectedRoute roles={['DOCTOR', 'STAFF', 'ADMIN']}>
+                        <ProtectedRoute roles={['STAFF']}>
                             <PatientForm />
                         </ProtectedRoute>
                     } />
@@ -203,6 +207,15 @@ function App() {
                             <MyHealthDashboard />
                         </ProtectedRoute>
                     } />
+
+                    <Route
+                        path="/admin"
+                        element={
+                            <ProtectedRoute roles={['STAFF']}>
+                                <AdminPanel />
+                            </ProtectedRoute>
+                        }
+                    />
 
                 </Routes>
 

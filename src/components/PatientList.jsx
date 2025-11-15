@@ -65,7 +65,6 @@ export default function PatientList() {
         <div className="patient-list">
             <div className="list-header">
                 <h2>Patienter ({patients.length})</h2>
-                <button onClick={() => navigate('new')} className="btn-primary">Ny patient</button>
             </div>
 
             {/* Search Bar */}
@@ -102,9 +101,7 @@ export default function PatientList() {
             {patients.length === 0 ? (
                 <div className="empty-state">
                     <p>Inga patienter matchade din sökning</p>
-                    <button onClick={() => navigate('new')} className="btn-primary">
-                        Skapa första patienten
-                    </button>
+                    <p>Kontakta admin om du vill lägga till en ny patient.</p>
                 </div>
             ) : (
                 <div className="patient-grid">
@@ -112,6 +109,7 @@ export default function PatientList() {
                         <div
                             key={patient.id}
                             className="patient-card"
+                            style={{marginBottom: '16px', cursor: 'pointer'}}
                             onClick={() => navigate(`${patient.id}`)}
                         >
                             <div className="patient-card-header">
