@@ -28,7 +28,7 @@ export default function ObservationForm() {
         { type: 'Temperatur', unit: '°C', placeholder: 'T.ex. 37.2' },
         { type: 'Vikt', unit: 'kg', placeholder: 'T.ex. 75.5' },
         { type: 'Längd', unit: 'cm', placeholder: 'T.ex. 175' },
-        { type: 'Blodsocke', unit: 'mmol/L', placeholder: 'T.ex. 5.5' },
+        { type: 'Blodsocker', unit: 'mmol/L', placeholder: 'T.ex. 5.5' },
         { type: 'Syresättning', unit: '%', placeholder: 'T.ex. 98' },
         { type: 'Andningsfrekvens', unit: 'andetag/min', placeholder: 'T.ex. 16' },
         { type: 'Annat', unit: '', placeholder: 'Ange värde' }

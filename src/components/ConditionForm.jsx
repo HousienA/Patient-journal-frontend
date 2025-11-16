@@ -166,10 +166,13 @@ export default function ConditionForm() {
                             onChange={handleChange}
                             required
                         >
-                            <option value="ACTIVE">Aktiv</option>
+                            <option value="ACTIVE">Aktiv (pågående behandling)</option>
+                            <option value="CHRONIC">Kronisk (långvarig)</option>
+                            <option value="UNDERTREATMENT">Under behandling</option>
                             <option value="RESOLVED">Avslutad/Botad</option>
+                            <option value="INACTIVE">Inaktiv (ej aktuell)</option>
                         </select>
-                        <small>Är tillståndet aktivt eller avslutat?</small>
+                        <small>Välj aktuell status för diagnosen</small>
                     </div>
 
                     <div className="form-group">

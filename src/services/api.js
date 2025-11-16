@@ -132,15 +132,13 @@ export const organizationApi = {
 };
 
 // Locations API
+// === LOCATION API ===
 export const locationApi = {
-    getAll: (organizationId = null, search = '') => {
-        const params = new URLSearchParams();
-        if (organizationId) params.append('organizationId', organizationId);
-        if (search) params.append('q', search);
-        return apiFetch(`/locations${params.toString() ? `?${params.toString()}` : ''}`);
+    getAll: (organizationId) => {
+        const url = organizationId
+            ? `/locations?organizationId=${organizationId}`
+            : '/locations';
+        return apiFetch(url);
     },
     getById: (id) => apiFetch(`/locations/${id}`),
-    create: (data) => apiFetch('/locations', { method: 'POST', body: JSON.stringify(data) }),
-    update: (id, data) => apiFetch(`/locations/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
-    delete: (id) => apiFetch(`/locations/${id}`, { method: 'DELETE' }),
 };

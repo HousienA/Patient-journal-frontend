@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { encounterApi, observationApi } from '../services/api';
+import {encounterApi, observationApi, locationApi, organizationApi} from '../services/api';
 //import './EncounterDetail.css';
 
 export default function EncounterDetail() {
@@ -8,6 +8,8 @@ export default function EncounterDetail() {
     const navigate = useNavigate();
     const [encounter, setEncounter] = useState(null);
     const [observations, setObservations] = useState([]);
+    const [location, setLocation] = useState(null);
+    const [organization, setOrganization] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
 
@@ -25,6 +27,24 @@ export default function EncounterDetail() {
 
             setEncounter(encounterData);
             setObservations(Array.isArray(observationData) ? observationData : []);
+
+
+            if (encounterData.locationId) {
+                try {
+                    const locationData = await locationApi.getById(encounterData.locationId);
+                    setLocation(locationData);
+
+                    // Location innehåller organization
+                    if (locationData.organizationId && locationData.organizationName) {
+                        setOrganization({
+                            id: locationData.organizationId,
+                            name: locationData.organizationName
+                        });
+                    }
+                } catch (locErr) {
+                    console.log('Could not load location:', locErr);
+                }
+            }
         } catch (err) {
             console.error('Error loading encounter:', err);
             setError('Kunde inte ladda vårdmöte');
@@ -44,11 +64,16 @@ export default function EncounterDetail() {
                     ← Tillbaka
                 </button>
                 <h1>Vårdmöte - {encounter.diagnosis}</h1>
+                <span className="encounter-date-big">
+                    {new Date(encounter.encounterDate).toLocaleDateString('sv-SE', {
+                        year: 'numeric', month: 'long', day: 'numeric'
+                    })}
+                </span>
             </div>
 
             {/* Grundinfo */}
             <section className="info-section">
-                <h2>Information</h2>
+                <h2>Information om vårdbesöket</h2>
                 <div className="info-grid">
                     <div className="info-item">
                         <label>Datum & Tid</label>
@@ -58,10 +83,31 @@ export default function EncounterDetail() {
                         })}</p>
                     </div>
                     <div className="info-item">
+                        <label>Diagnos</label>
+                        <p className="diagnosis-text">{encounter.diagnosis}</p>
+                    </div>
+                    <div className="info-item">
                         <label>Patient-ID</label>
                         <p>#{encounter.patientId}</p>
                     </div>
+
+
+                    {organization && (
+                        <div className="info-item">
+                            <label>Organisation</label>
+                            <p>{organization.name}</p>
+                        </div>
+                    )}
+
+
+                    {location && (
+                        <div className="info-item">
+                            <label>Plats</label>
+                            <p>{location.name}</p>
+                        </div>
+                    )}
                 </div>
+
                 {encounter.notes && (
                     <div className="notes-box">
                         <label>Anteckningar</label>
@@ -83,7 +129,10 @@ export default function EncounterDetail() {
                 </div>
 
                 {observations.length === 0 ? (
-                    <p className="empty-text">Inga mätningar registrerade</p>
+                    <div className="empty-state">
+                        <p className="empty-text">Inga mätningar registrerade</p>
+                        <p className="help-text">Lägg till mätningar som togs vid detta vårdmöte</p>
+                    </div>
                 ) : (
                     <div className="observation-grid">
                         {observations.map(obs => (
@@ -101,9 +150,9 @@ export default function EncounterDetail() {
                                 <button
                                     onClick={() => navigate(`/observations/${obs.id}/edit`)}
                                     className="btn-icon"
-
+                                    title="Redigera observation"
                                 >
-                                    ✎ Redigera
+                                    ✏️
                                 </button>
                             </div>
                         ))}

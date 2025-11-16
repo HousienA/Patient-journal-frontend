@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { patientApi, encounterApi, conditionApi, messageApi } from '../services/api';
-//import './MyHealthDashboard.css';
+import { patientApi, encounterApi, conditionApi, messageApi, locationApi } from '../services/api';
+
 
 export default function MyHealthDashboard() {
     const { user } = useAuth();
     const [patientData, setPatientData] = useState(null);
     const [encounters, setEncounters] = useState([]);
+    const [encountersWithLocations, setEncountersWithLocations] = useState([]);
     const [conditions, setConditions] = useState([]);
     const [messages, setMessages] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -41,14 +42,48 @@ export default function MyHealthDashboard() {
                 messageApi.getByPatientId(myPatient.id).catch(() => [])
             ]);
 
-            setEncounters(Array.isArray(encounterData) ? encounterData : []);
+            const encountersArray = Array.isArray(encounterData) ? encounterData : [];
+            setEncounters(encountersArray);
             setConditions(Array.isArray(conditionData) ? conditionData : []);
             setMessages(Array.isArray(messageData) ? messageData : []);
+
+            // Hämta location-data för varje encounter
+            await loadEncounterLocations(encountersArray);
         } catch (err) {
             console.error('Error loading health data:', err);
             setError('Kunde inte ladda din hälsoinformation');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const loadEncounterLocations = async (encountersArray) => {
+        try {
+            const encountersWithLocs = await Promise.all(
+                encountersArray.map(async (encounter) => {
+                    if (encounter.locationId) {
+                        try {
+                            const locationData = await locationApi.getById(encounter.locationId);
+                            return {
+                                ...encounter,
+                                location: locationData,
+                                organization: locationData.organizationId && locationData.organizationName
+                                    ? { id: locationData.organizationId, name: locationData.organizationName }
+                                    : null
+                            };
+                            // eslint-disable-next-line no-unused-vars
+                        } catch (err) {
+                            console.log('Could not load location for encounter:', encounter.id);
+                            return encounter;
+                        }
+                    }
+                    return encounter;
+                })
+            );
+            setEncountersWithLocations(encountersWithLocs);
+        } catch (err) {
+            console.error('Error loading locations:', err);
+            setEncountersWithLocations(encountersArray);
         }
     };
 
@@ -83,6 +118,32 @@ export default function MyHealthDashboard() {
                 <h1>Min hälsoinformation</h1>
                 <p className="subtitle">Översikt över dina vårdbesök och diagnoser</p>
             </div>
+
+            {/* Snabböversikt */}
+            <div className="stats-grid">
+                <div className="stat-card">
+                    <div className="stat-icon">📋</div>
+                    <div className="stat-content">
+                        <h3>{encounters.length}</h3>
+                        <p>Vårdbesök</p>
+                    </div>
+                </div>
+                <div className="stat-card">
+                    <div className="stat-icon">🏥</div>
+                    <div className="stat-content">
+                        <h3>{activeConditions.length}</h3>
+                        <p>Aktiva diagnoser</p>
+                    </div>
+                </div>
+                <div className="stat-card">
+                    <div className="stat-icon">✉️</div>
+                    <div className="stat-content">
+                        <h3>{unreadMessages.length}</h3>
+                        <p>Olästa meddelanden</p>
+                    </div>
+                </div>
+            </div>
+
             {/* Personuppgifter */}
             <section className="info-section">
                 <h2>Mina uppgifter</h2>
@@ -118,7 +179,10 @@ export default function MyHealthDashboard() {
                                 <div className="card-header">
                                     <h3>{condition.conditionName}</h3>
                                     <span className={`status-badge ${condition.status.toLowerCase()}`}>
-                    {condition.status === 'ACTIVE' ? 'Aktiv' : 'Avslutad'}
+                    {condition.status === 'ACTIVE' ? 'Aktiv' :
+                        condition.status === 'CHRONIC' ? 'Kronisk' :
+                            condition.status === 'UNDERTREATMENT' ? 'Under behandling' :
+                                condition.status === 'RESOLVED' ? 'Avslutad' : 'Inaktiv'}
                   </span>
                                 </div>
                                 {condition.description && <p>{condition.description}</p>}
@@ -133,17 +197,17 @@ export default function MyHealthDashboard() {
                 )}
             </section>
 
-            {/* Vårdbesök */}
+            {/* Vårdbesök MED LOCATION & ORGANIZATION */}
             <section className="info-section">
                 <h2>Mina vårdbesök ({encounters.length})</h2>
-                {encounters.length === 0 ? (
+                {encountersWithLocations.length === 0 ? (
                     <p className="empty-text">Inga vårdbesök registrerade</p>
                 ) : (
                     <div className="card-list">
-                        {encounters
+                        {encountersWithLocations
                             .sort((a, b) => new Date(b.encounterDate) - new Date(a.encounterDate))
                             .map(encounter => (
-                                <div key={encounter.id} className="health-card">
+                                <div key={encounter.id} className="health-card encounter-card">
                                     <div className="card-header">
                                         <h3>{encounter.diagnosis || 'Ingen diagnos angiven'}</h3>
                                         <span className="date-badge">
@@ -154,6 +218,23 @@ export default function MyHealthDashboard() {
                     })}
                   </span>
                                     </div>
+
+                                    {/* NYTT: Visa Location & Organization */}
+                                    <div className="encounter-details">
+                                        {encounter.location && (
+                                            <div className="detail-item">
+                                                <span className="detail-icon">📍</span>
+                                                <span className="detail-text">{encounter.location.name}</span>
+                                            </div>
+                                        )}
+                                        {encounter.organization && (
+                                            <div className="detail-item">
+                                                <span className="detail-icon">🏢</span>
+                                                <span className="detail-text">{encounter.organization.name}</span>
+                                            </div>
+                                        )}
+                                    </div>
+
                                     {encounter.notes && (
                                         <div className="notes-section">
                                             <strong>Anteckningar:</strong>
