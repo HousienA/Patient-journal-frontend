@@ -149,7 +149,7 @@ export default function MessageCenter() {
                 </button>
             </div>
 
-            {error && <div className="error-message">{error}</div>}
+
 
             {showNewMessage && (
                 <div className="new-message-form">

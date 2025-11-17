@@ -187,7 +187,7 @@ export default function ConditionForm() {
                     </div>
                 </div>
 
-                {error && <div className="form-error">⚠️ {error}</div>}
+                {error && <div className="form-success">⚠️ {error}</div>}
 
                 <div className="form-actions">
                     <button type="submit" className="btn-primary btn-large" disabled={loading}>

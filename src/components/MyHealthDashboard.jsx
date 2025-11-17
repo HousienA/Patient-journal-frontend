@@ -122,21 +122,18 @@ export default function MyHealthDashboard() {
             {/* Snabböversikt */}
             <div className="stats-grid">
                 <div className="stat-card">
-                    <div className="stat-icon">📋</div>
                     <div className="stat-content">
                         <h3>{encounters.length}</h3>
                         <p>Vårdbesök</p>
                     </div>
                 </div>
                 <div className="stat-card">
-                    <div className="stat-icon">🏥</div>
                     <div className="stat-content">
                         <h3>{activeConditions.length}</h3>
                         <p>Aktiva diagnoser</p>
                     </div>
                 </div>
                 <div className="stat-card">
-                    <div className="stat-icon">✉️</div>
                     <div className="stat-content">
                         <h3>{unreadMessages.length}</h3>
                         <p>Olästa meddelanden</p>
@@ -219,7 +216,7 @@ export default function MyHealthDashboard() {
                   </span>
                                     </div>
 
-                                    {/* NYTT: Visa Location & Organization */}
+                                    {/* Location & Organization */}
                                     <div className="encounter-details">
                                         {encounter.location && (
                                             <div className="detail-item">
