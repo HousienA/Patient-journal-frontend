@@ -152,7 +152,7 @@ export default function EncounterDetail() {
                                     className="btn-icon"
                                     title="Redigera observation"
                                 >
-                                    ✏️
+                                    redigera
                                 </button>
                             </div>
                         ))}

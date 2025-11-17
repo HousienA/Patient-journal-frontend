@@ -149,8 +149,6 @@ export default function MessageCenter() {
                 </button>
             </div>
 
-
-
             {showNewMessage && (
                 <div className="new-message-form">
                     <h2>

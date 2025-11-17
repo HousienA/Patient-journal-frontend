@@ -21,7 +21,7 @@ export default function ObservationForm() {
     const [loadingData, setLoadingData] = useState(isEdit);
     const [error, setError] = useState('');
 
-    // Förutfyllda observationstyper
+
     const observationTypes = [
         { type: 'Blodtryck', unit: 'mmHg', placeholder: 'T.ex. 120/80' },
         { type: 'Puls', unit: 'slag/min', placeholder: 'T.ex. 72' },
@@ -62,7 +62,7 @@ export default function ObservationForm() {
     const handleChange = (e) => {
         const { name, value } = e.target;
 
-        // Om observationType ändras, uppdatera unit automatiskt
+
         if (name === 'observationType') {
             const selectedType = observationTypes.find(t => t.type === value);
             setForm(prev => ({
@@ -206,7 +206,6 @@ export default function ObservationForm() {
                     />
                 </div>
 
-                {error && <div className="form-error">⚠️ {error}</div>}
 
                 <div className="form-actions">
                     <button

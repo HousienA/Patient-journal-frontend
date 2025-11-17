@@ -101,7 +101,6 @@ export default function AdminPanel() {
                 <button onClick={() => setTab('STAFF')} className={tab==='STAFF'?'active':''}>Staff</button>
             </div>
 
-            {error && <div className="error-message">{error}</div>}
 
             {tab === 'PATIENTS' && (
                 <>

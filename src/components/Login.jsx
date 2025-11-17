@@ -53,8 +53,6 @@ export default function Login() {
                         />
                     </div>
 
-                    {error && <div className="error-message">{error}</div>}
-
                     <button type="submit" disabled={loading}>
                         {loading ? 'Loggar in...' : 'Logga in'}
                     </button>

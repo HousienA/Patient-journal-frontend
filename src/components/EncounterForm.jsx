@@ -21,7 +21,6 @@ export default function EncounterForm() {
     const [organizations, setOrganizations] = useState([]);
     const [locations, setLocations] = useState([]);
     const [loading, setLoading] = useState(false);
-    const [error, setError] = useState('');
 
     useEffect(() => {
         loadOrganizationsAndLocations();
@@ -216,11 +215,6 @@ export default function EncounterForm() {
                     />
                 </div>
 
-                {error && (
-                    <div className="form-error">
-                        ⚠️ {error}
-                    </div>
-                )}
 
                 <div className="form-actions">
                     <button

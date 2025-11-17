@@ -131,11 +131,6 @@ export default function PatientForm() {
                     />
                 </div>
 
-                {error && (
-                    <div className="form-error">
-                        ⚠️ {error}
-                    </div>
-                )}
 
                 <div className="form-actions">
                     <button
