@@ -43,92 +43,92 @@ export const authApi = {
 
 // Patient API
 export const patientApi = {
-    getAll: () => apiFetch('/patients'),
+    getAll: () => apiFetch('/clinical/patients'),
 
-    getById: (id) => apiFetch(`/patients/${id}`),
+    getById: (id) => apiFetch(`/clinical/patients/${id}`),
 
     create: (patientData) =>
-        apiFetch('/patients', {
+        apiFetch('/clinical/patients', {
             method: 'POST',
             body: JSON.stringify(patientData),
         }),
 
     update: (id, patientData) =>
-        apiFetch(`/patients/${id}`, {
+        apiFetch(`/clinical/patients/${id}`, {
             method: 'PUT',
             body: JSON.stringify(patientData),
         }),
 
     delete: (id) =>
-        apiFetch(`/patients/${id}`, { method: 'DELETE' }),
+        apiFetch(`/clinical/patients/${id}`, { method: 'DELETE' }),
 
     searchByFields: ({ pnr, name }) => {
         const params = new URLSearchParams();
         if (pnr) params.append('pnr', pnr);
         if (name) params.append('name', name);
         const qs = params.toString();
-        return apiFetch(`/patients/search${qs ? `?${qs}` : ''}`);
+        return apiFetch(`/clinical/patients/search${qs ? `?${qs}` : ''}`);
     }
 };
 
 // Conditions API
 export const conditionApi = {
-    getAll: () => apiFetch('/conditions'),
-    getById: (id) => apiFetch(`/conditions/${id}`),
-    getByPatientId: (patientId) => apiFetch(`/conditions/patient/${patientId}`),
-    create: (data) => apiFetch('/conditions', { method: 'POST', body: JSON.stringify(data) }),
-    update: (id, data) => apiFetch(`/conditions/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
-    delete: (id) => apiFetch(`/conditions/${id}`, { method: 'DELETE' }),
+    getAll: () => apiFetch('/clinical/conditions'),
+    getById: (id) => apiFetch(`/clinical/conditions/${id}`),
+    getByPatientId: (patientId) => apiFetch(`/clinical/conditions/patient/${patientId}`),
+    create: (data) => apiFetch('/clinical/conditions', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id, data) => apiFetch(`/clinical/conditions/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    delete: (id) => apiFetch(`/clinical/conditions/${id}`, { method: 'DELETE' }),
 };
 
 // Encounters API
 export const encounterApi = {
-    getAll: () => apiFetch('/encounters'),
-    getById: (id) => apiFetch(`/encounters/${id}`),
-    getByPatientId: (patientId) => apiFetch(`/encounters/patient/${patientId}`),
-    create: (data) => apiFetch('/encounters', { method: 'POST', body: JSON.stringify(data) }),
-    update: (id, data) => apiFetch(`/encounters/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
-    delete: (id) => apiFetch(`/encounters/${id}`, { method: 'DELETE' }),
+    getAll: () => apiFetch('/clinical/encounters'),
+    getById: (id) => apiFetch(`/clinical/encounters/${id}`),
+    getByPatientId: (patientId) => apiFetch(`/clinical/encounters/patient/${patientId}`),
+    create: (data) => apiFetch('/clinical/encounters', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id, data) => apiFetch(`/clinical/encounters/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    delete: (id) => apiFetch(`/clinical/encounters/${id}`, { method: 'DELETE' }),
 };
 
 // Messages API
 export const messageApi = {
-    getAll: () => apiFetch('/messages'),
-    getById: (id) => apiFetch(`/messages/${id}`),
-    getByPatientId: (patientId) => apiFetch(`/messages/patient/${patientId}`),
-    getUnread: (patientId) => apiFetch(`/messages/patient/${patientId}/unread`),
-    create: (data) => apiFetch('/messages', { method: 'POST', body: JSON.stringify(data) }),
-    update: (id, data) => apiFetch(`/messages/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
-    markAsRead: (id) => apiFetch(`/messages/${id}/read`, { method: 'POST' }),
-    delete: (id) => apiFetch(`/messages/${id}`, { method: 'DELETE' }),
+    getAll: () => apiFetch('/messaging'),
+    getById: (id) => apiFetch(`/messaging/${id}`),
+    getByPatientId: (patientId) => apiFetch(`/messaging/patient/${patientId}`),
+    getUnread: (patientId) => apiFetch(`/messaging/patient/${patientId}/unread`),
+    create: (data) => apiFetch('/messaging', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id, data) => apiFetch(`/messaging/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    markAsRead: (id) => apiFetch(`/messaging/${id}/read`, { method: 'POST' }),
+    delete: (id) => apiFetch(`/messaging/${id}`, { method: 'DELETE' }),
 };
 
 // Observations API
 export const observationApi = {
-    getAll: () => apiFetch('/observations'),
-    getById: (id) => apiFetch(`/observations/${id}`),
-    getByEncounterId: (encounterId) => apiFetch(`/observations/encounter/${encounterId}`),
-    create: (data) => apiFetch('/observations', { method: 'POST', body: JSON.stringify(data) }),
-    update: (id, data) => apiFetch(`/observations/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
-    delete: (id) => apiFetch(`/observations/${id}`, { method: 'DELETE' }),
+    getAll: () => apiFetch('/clinical/observations'),
+    getById: (id) => apiFetch(`/clinical/observations/${id}`),
+    getByEncounterId: (encounterId) => apiFetch(`/clinical/observations/encounter/${encounterId}`),
+    create: (data) => apiFetch('/clinical/observations', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id, data) => apiFetch(`/clinical/observations/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    delete: (id) => apiFetch(`/clinical/observations/${id}`, { method: 'DELETE' }),
 };
 
 // Practitioners API
 export const practitionerApi = {
-    getAll: () => apiFetch('/practitioners'),
-    getById: (id) => apiFetch(`/practitioners/${id}`),
-    create: (data) => apiFetch('/practitioners', { method: 'POST', body: JSON.stringify(data) }),
-    update: (id, data) => apiFetch(`/practitioners/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
-    delete: (id) => apiFetch(`/practitioners/${id}`, { method: 'DELETE' }),
+    getAll: () => apiFetch('/clinical/practitioners'),
+    getById: (id) => apiFetch(`/clinical/practitioners/${id}`),
+    create: (data) => apiFetch('/clinical/practitioners', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id, data) => apiFetch(`/clinical/practitioners/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    delete: (id) => apiFetch(`/clinical/practitioners/${id}`, { method: 'DELETE' }),
 };
 
 // Organizations API
 export const organizationApi = {
-    getAll: (search = '') => apiFetch(`/organizations${search ? `?q=${search}` : ''}`),
-    getById: (id) => apiFetch(`/organizations/${id}`),
-    create: (data) => apiFetch('/organizations', { method: 'POST', body: JSON.stringify(data) }),
-    update: (id, data) => apiFetch(`/organizations/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
-    delete: (id) => apiFetch(`/organizations/${id}`, { method: 'DELETE' }),
+    getAll: (search = '') => apiFetch(`/clinical/organizations${search ? `?q=${search}` : ''}`),
+    getById: (id) => apiFetch(`/clinical/organizations/${id}`),
+    create: (data) => apiFetch('/clinical/organizations', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id, data) => apiFetch(`/clinical/organizations/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    delete: (id) => apiFetch(`/clinical/organizations/${id}`, { method: 'DELETE' }),
 };
 
 // Locations API
@@ -136,9 +136,9 @@ export const organizationApi = {
 export const locationApi = {
     getAll: (organizationId) => {
         const url = organizationId
-            ? `/locations?organizationId=${organizationId}`
-            : '/locations';
+            ? `/clinical/locations?organizationId=${organizationId}`
+            : '/clinical/locations';
         return apiFetch(url);
     },
-    getById: (id) => apiFetch(`/locations/${id}`),
+    getById: (id) => apiFetch(`/clinical/locations/${id}`),
 };
