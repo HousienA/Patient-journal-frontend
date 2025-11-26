@@ -1,9 +1,17 @@
 import { useEffect, useState } from 'react';
-import { patientApi, practitionerApi, authApi } from '../services/api';
-import { useAuth } from '../contexts/AuthContext';
+// authApi är borttaget här
+import { patientApi, practitionerApi } from '../services/api';
+
+// Om du vill köra med Keycloak senare, avkommentera denna rad:
+// import { useAuth } from "react-oidc-context";
 
 export default function AdminPanel() {
-    const { user } = useAuth();
+    // Om du kör TEST-LÄGE (utan auth):
+    const user = { username: "TestAdmin", role: "ADMIN" };
+
+    // Om du kör KEYCLOAK (avkommentera detta och ta bort raden ovan):
+    // const { user } = useAuth();
+
     const [tab, setTab] = useState('PATIENTS');
     const [patients, setPatients] = useState([]);
     const [practitioners, setPractitioners] = useState([]);
@@ -27,7 +35,10 @@ export default function AdminPanel() {
                 const data = await practitionerApi.getAll();
                 setPractitioners(Array.isArray(data) ? data : []);
             }
-        } catch (err) { setError(err.message || 'Failed to load'); }
+        } catch (err) {
+            console.error(err);
+            setError(err.message || 'Failed to load');
+        }
     };
 
     const createPatient = async () => {
@@ -38,11 +49,13 @@ export default function AdminPanel() {
                 personalNumber: newPatient.personalNumber.trim(),
                 email: newPatient.email?.trim() || null,
                 phone: newPatient.phone?.trim() || null,
-                userId: null // created without user account
+                authId: null // Vi sätter ingen inloggning på patienten just nu
             });
             setNewPatient({ fullName: '', personalNumber: '', email: '', phone: '' });
             await load();
-        } catch (err) { setError(err.message || 'Failed to create patient'); }
+        } catch (err) {
+            setError(err.message || 'Failed to create patient');
+        }
         finally { setCreating(false); }
     };
 
@@ -52,36 +65,14 @@ export default function AdminPanel() {
     };
 
     const createDoctor = async () => {
-        setCreating(true); setError('');
-        try {
-            // Reuse register endpoint to create a user + practitioner
-            await authApi.register({
-                username: newDoctor.username.trim(),
-                email: newDoctor.email.trim(),
-                password: newDoctor.password,
-                role: 'DOCTOR',
-                fullName: newDoctor.fullName.trim()
-            });
-            setNewDoctor({ username: '', email: '', password: '', fullName: '' });
-            await load();
-        } catch (err) { setError(err.message || 'Failed to create doctor'); }
-        finally { setCreating(false); }
+        // Vi kan inte skapa användare via API längre, det görs i Keycloak
+        alert("För att lägga till en läkare:\n1. Skapa användaren i Keycloak.\n2. Kopiera användarens ID.\n3. Skapa sedan Practitioners-profilen här (Funktion ej implementerad i frontend än).");
+        setNewDoctor({ username: '', email: '', password: '', fullName: '' });
     };
 
     const createStaff = async () => {
-        setCreating(true); setError('');
-        try {
-            // Reuse register endpoint to create a STAFF user
-            await authApi.register({
-                username: newStaff.username.trim(),
-                email: newStaff.email.trim(),
-                password: newStaff.password,
-                role: 'STAFF'
-            });
-            // No list to reload on this tab if you keep practitioners; alternatively, add a staff list if you track staff somewhere.
-            setNewStaff({ username: '', email: '', password: '' });
-        } catch (err) { setError(err.message || 'Failed to create staff'); }
-        finally { setCreating(false); }
+        alert("Använd Keycloak Admin Console för att skapa personal-konton.");
+        setNewStaff({ username: '', email: '', password: '' });
     };
 
     const deletePractitioner = async (id) => {
@@ -101,7 +92,6 @@ export default function AdminPanel() {
                 <button onClick={() => setTab('STAFF')} className={tab==='STAFF'?'active':''}>Staff</button>
             </div>
 
-
             {tab === 'PATIENTS' && (
                 <>
                     <h2>Create patient</h2>
@@ -112,6 +102,8 @@ export default function AdminPanel() {
                         <input placeholder="Phone (optional)" value={newPatient.phone} onChange={e=>setNewPatient({...newPatient, phone:e.target.value})}/>
                         <button onClick={createPatient} disabled={creating}>Create</button>
                     </div>
+
+                    {error && <div style={{color: 'red', marginBottom: '10px'}}>{error}</div>}
 
                     <h2>All patients ({patients.length})</h2>
                     <ul className="list">
@@ -128,12 +120,13 @@ export default function AdminPanel() {
             {tab === 'DOCTORS' && (
                 <>
                     <h2>Create doctor</h2>
+                    <p style={{fontStyle: 'italic', color: '#666'}}>Obs: Skapande av användare sker nu i Keycloak.</p>
                     <div className="grid">
                         <input placeholder="Username" value={newDoctor.username} onChange={e=>setNewDoctor({...newDoctor, username:e.target.value})}/>
                         <input placeholder="Email" value={newDoctor.email} onChange={e=>setNewDoctor({...newDoctor, email:e.target.value})}/>
                         <input placeholder="Password" type="password" value={newDoctor.password} onChange={e=>setNewDoctor({...newDoctor, password:e.target.value})}/>
                         <input placeholder="Full name" value={newDoctor.fullName} onChange={e=>setNewDoctor({...newDoctor, fullName:e.target.value})}/>
-                        <button onClick={createDoctor} disabled={creating}>Create</button>
+                        <button onClick={createDoctor} disabled={creating}>Create (Demo)</button>
                     </div>
 
                     <h2>All doctors ({practitioners.length})</h2>

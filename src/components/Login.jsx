@@ -1,70 +1,32 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from "react-oidc-context";
+import { Navigate } from "react-router-dom";
 
 export default function Login() {
-    const navigate = useNavigate();
-    const { login } = useAuth();
-    const [username, setUsername] = useState('');
-    const [password, setPassword] = useState('');
-    const [error, setError] = useState('');
-    const [loading, setLoading] = useState(false);
+    const auth = useAuth();
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        setError('');
-        setLoading(true);
+    if (auth.isLoading) {
+        return <div>Laddar inloggning...</div>;
+    }
 
-        try {
-            await login(username, password);
-            // Efter lyckad login, navigera till dashboard
-            navigate('/');
-        } catch (err) {
-            setError(err.message || 'Inloggning misslyckades');
-        } finally {
-            setLoading(false);
-        }
-    };
+    if (auth.error) {
+        return <div>Oj, något gick fel: {auth.error.message}</div>;
+    }
+
+    if (auth.isAuthenticated) {
+        // Om vi redan är inloggade, skicka till dashboard
+        return <Navigate to="/dashboard" />;
+    }
 
     return (
         <div className="login-container">
-            <div className="login-card">
-                <h2>Logga in</h2>
-                <form onSubmit={handleSubmit}>
-                    <div className="form-group">
-                        <label>Användarnamn</label>
-                        <input
-                            type="text"
-                            value={username}
-                            onChange={(e) => setUsername(e.target.value)}
-                            required
-                            placeholder="Ange användarnamn"
-                        />
-                    </div>
-
-                    <div className="form-group">
-                        <label>Lösenord</label>
-                        <input
-                            type="password"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            required
-                            placeholder="Ange lösenord"
-                        />
-                    </div>
-
-                    <button type="submit" disabled={loading}>
-                        {loading ? 'Loggar in...' : 'Logga in'}
-                    </button>
-                </form>
-
-                <p className="register-link">
-                    Har du inget konto?
-                    <button onClick={() => navigate('/register')}>
-                        Registrera dig här
-                    </button>
-                </p>
-            </div>
+            <h1>Välkommen till Patientjournalen</h1>
+            <p>Logga in med ditt Keycloak-konto</p>
+            <button
+                onClick={() => auth.signinRedirect()}
+                className="btn-primary"
+            >
+                Logga in med Keycloak
+            </button>
         </div>
     );
 }

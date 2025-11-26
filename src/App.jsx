@@ -1,5 +1,5 @@
 import { Routes, Route, Navigate, Link } from 'react-router-dom';
-import { useAuth } from './contexts/AuthContext';
+import { useAuth } from './contexts/AuthContext'; // Din wrapper
 import Login from './components/Login';
 import PatientList from "./components/PatientList.jsx";
 import './App.css';
@@ -8,23 +8,26 @@ import PatientDetail from "./components/PatientDetail.jsx";
 import EncounterForm from "./components/EncounterForm.jsx";
 import MessageCenter from "./components/MessageCenter.jsx";
 import ConditionForm from "./components/ConditionForm.jsx";
-import Register from "./components/Register.jsx";
 import ObservationForm from "./components/ObservationForm.jsx";
 import EncounterDetail from './components/EncounterDetail';
 import MessageThread from "./components/MessageThread.jsx";
 import MyHealthDashboard from "./components/MyHealthDashboard.jsx";
 import AdminPanel from "./components/AdminPanel.jsx";
 
-
+// En placeholder för Registrering (eftersom vi tog bort komponenten)
+function RegisterPlaceholder() {
+    return <div className="error-page">Registrering sker via Keycloak eller Administratör.</div>;
+}
 
 function ProtectedRoute({ children, roles = null }) {
-    const { user } = useAuth();
+    const { user, loading } = useAuth();
 
+    if (loading) return <div>Laddar behörigheter...</div>;
     if (!user) return <Navigate to="/login" />;
 
     // Om specifika roller krävs, kolla det
     if (roles && !roles.includes(user.role)) {
-        return <div className="error-page">Du har inte behörighet att se denna sida</div>;
+        return <div className="error-page">Du har inte behörighet att se denna sida (Kräver: {roles.join(', ')})</div>;
     }
 
     return children;
@@ -32,6 +35,8 @@ function ProtectedRoute({ children, roles = null }) {
 
 function Dashboard() {
     const { user } = useAuth();
+
+    if (!user) return null; // Säkerhetskoll
 
     return (
         <div className="dashboard">
@@ -64,14 +69,23 @@ function Dashboard() {
 }
 
 function App() {
+    // HÄR VAR FELET: Vi måste destrukturera user från useAuth()
     const { user, logout, loading } = useAuth();
 
-    const handleLogout = async () => {
-        await logout();
+    // Om du använder OIDC-wrapper kanske den heter "signoutRedirect",
+    // men din wrapper i AuthContext.jsx mappar nog den till "logout".
+    // Vi kör en safe-guard här:
+    const handleLogout = () => {
+        if (logout) {
+            logout();
+        } else {
+            // Fallback om din wrapper inte exponerar logout direkt
+            console.error("Logout function not found");
+        }
     };
 
     if (loading) {
-        return <div className="loading-screen">Laddar...</div>;
+        return <div className="loading-screen">Startar applikation...</div>;
     }
 
     return (
@@ -83,9 +97,9 @@ function App() {
                         <h1>Patientjournal</h1>
                     </div>
                     <div className="header-right">
-            <span className="user-info">
-              {user.username} <span className="role-badge">{user.role}</span>
-            </span>
+                        <span className="user-info">
+                          {user.username} <span className="role-badge">{user.role}</span>
+                        </span>
                         <button onClick={handleLogout} className="logout-btn">
                             Logga ut
                         </button>
@@ -106,7 +120,6 @@ function App() {
 
                     {user.role === 'STAFF' && <Link to="/admin">Admin</Link>}
 
-
                     {user.role === 'PATIENT' && (
                         <>
                             <Link to="/my-health">Min information</Link>
@@ -121,7 +134,7 @@ function App() {
             <main className="app-main">
                 <Routes>
                     <Route path="/login" element={<Login />} />
-                    <Route path="/register" element={<Register />} />
+                    <Route path="/register" element={<RegisterPlaceholder />} />
 
                     <Route path="/" element={
                         <ProtectedRoute>
@@ -174,7 +187,6 @@ function App() {
                         }
                     />
 
-                    // Edit (:id param)
                     <Route
                         path="/conditions/:id/edit"
                         element={
@@ -216,10 +228,7 @@ function App() {
                             </ProtectedRoute>
                         }
                     />
-
                 </Routes>
-
-
             </main>
         </div>
     );

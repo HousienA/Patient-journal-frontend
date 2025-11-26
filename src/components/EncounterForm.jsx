@@ -21,6 +21,8 @@ export default function EncounterForm() {
     const [organizations, setOrganizations] = useState([]);
     const [locations, setLocations] = useState([]);
     const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
+
 
     useEffect(() => {
         loadOrganizationsAndLocations();

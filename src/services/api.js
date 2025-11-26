@@ -1,67 +1,60 @@
 const API_BASE = '/api';
 
 
+function getAccessToken() {
+    const key = `oidc.user:http://localhost:8080/realms/journal-realm:backend-service`;
+    const stored = sessionStorage.getItem(key);
+    if (stored) {
+        try {
+            const user = JSON.parse(stored);
+            return user.access_token;
+            // eslint-disable-next-line no-unused-vars
+        } catch (e) {
+            return null;
+        }
+    }
+    return null;
+}
+
 async function apiFetch(endpoint, options = {}) {
-    const token = localStorage.getItem('sessionToken');
+    const token = getAccessToken();
 
     const config = {
         ...options,
         headers: {
             'Content-Type': 'application/json',
-            ...(token && { 'X-Session-Token': token }),
+            // VIKTIGT: Skicka token som Bearer, inte X-Session-Token
+            ...(token && { 'Authorization': `Bearer ${token}` }),
             ...options.headers,
         },
     };
 
     const response = await fetch(`${API_BASE}${endpoint}`, config);
 
+    if (response.status === 401) {
+        throw new Error('Unauthorized: Please login again');
+    }
+
     if (!response.ok) {
         const error = await response.json().catch(() => ({ error: 'Network error' }));
         throw new Error(error.error || 'API request failed');
     }
 
+
+    if (response.status === 204) return null;
+
     return response.json();
 }
 
-// Auth API
-export const authApi = {
-    login: (username, password) =>
-        apiFetch('/auth/login', {
-            method: 'POST',
-            body: JSON.stringify({ username, password }),
-        }),
 
-    register: (userData) =>
-        apiFetch('/auth/register', {
-            method: 'POST',
-            body: JSON.stringify(userData),
-        }),
 
-    logout: () =>
-        apiFetch('/auth/logout', { method: 'POST' }),
-};
-
-// Patient API
+// Patient API (Går till Clinikal Service)
 export const patientApi = {
     getAll: () => apiFetch('/clinical/patients'),
-
     getById: (id) => apiFetch(`/clinical/patients/${id}`),
-
-    create: (patientData) =>
-        apiFetch('/clinical/patients', {
-            method: 'POST',
-            body: JSON.stringify(patientData),
-        }),
-
-    update: (id, patientData) =>
-        apiFetch(`/clinical/patients/${id}`, {
-            method: 'PUT',
-            body: JSON.stringify(patientData),
-        }),
-
-    delete: (id) =>
-        apiFetch(`/clinical/patients/${id}`, { method: 'DELETE' }),
-
+    create: (data) => apiFetch('/clinical/patients', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id, data) => apiFetch(`/clinical/patients/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    delete: (id) => apiFetch(`/clinical/patients/${id}`, { method: 'DELETE' }),
     searchByFields: ({ pnr, name }) => {
         const params = new URLSearchParams();
         if (pnr) params.append('pnr', pnr);
@@ -91,16 +84,16 @@ export const encounterApi = {
     delete: (id) => apiFetch(`/clinical/encounters/${id}`, { method: 'DELETE' }),
 };
 
-// Messages API
+// Messages API (Går till Massage Service)
+// VIKTIGT: Jag har ändrat endpointen till /messages för att matcha din Controller
 export const messageApi = {
-    getAll: () => apiFetch('/messaging'),
-    getById: (id) => apiFetch(`/messaging/${id}`),
-    getByPatientId: (patientId) => apiFetch(`/messaging/patient/${patientId}`),
-    getUnread: (patientId) => apiFetch(`/messaging/patient/${patientId}/unread`),
-    create: (data) => apiFetch('/messaging', { method: 'POST', body: JSON.stringify(data) }),
-    update: (id, data) => apiFetch(`/messaging/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
-    markAsRead: (id) => apiFetch(`/messaging/${id}/read`, { method: 'POST' }),
-    delete: (id) => apiFetch(`/messaging/${id}`, { method: 'DELETE' }),
+    getAll: () => apiFetch('/messages'),
+    getById: (id) => apiFetch(`/messages/${id}`),
+    getByPatientId: (patientId) => apiFetch(`/messages/patient/${patientId}`),
+    getByPractitionerId: (practitionerId) => apiFetch(`/messages/practitioner/${practitionerId}`),
+    create: (data) => apiFetch('/messages', { method: 'POST', body: JSON.stringify(data) }),
+    // Denna endpoint fanns i din controller:
+    markAsRead: (id) => apiFetch(`/messages/${id}/read`, { method: 'PUT' }),
 };
 
 // Observations API
@@ -118,11 +111,11 @@ export const practitionerApi = {
     getAll: () => apiFetch('/clinical/practitioners'),
     getById: (id) => apiFetch(`/clinical/practitioners/${id}`),
     create: (data) => apiFetch('/clinical/practitioners', { method: 'POST', body: JSON.stringify(data) }),
-    update: (id, data) => apiFetch(`/clinical/practitioners/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
-    delete: (id) => apiFetch(`/clinical/practitioners/${id}`, { method: 'DELETE' }),
+    // delete fanns inte i din senaste controller, men om du lagt till den:
+    // delete: (id) => apiFetch(`/clinical/practitioners/${id}`, { method: 'DELETE' }),
 };
 
-// Organizations API
+// Organizations & Locations API
 export const organizationApi = {
     getAll: (search = '') => apiFetch(`/clinical/organizations${search ? `?q=${search}` : ''}`),
     getById: (id) => apiFetch(`/clinical/organizations/${id}`),
@@ -131,8 +124,6 @@ export const organizationApi = {
     delete: (id) => apiFetch(`/clinical/organizations/${id}`, { method: 'DELETE' }),
 };
 
-// Locations API
-// === LOCATION API ===
 export const locationApi = {
     getAll: (organizationId) => {
         const url = organizationId
