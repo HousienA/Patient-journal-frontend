@@ -133,3 +133,7 @@ export const locationApi = {
     },
     getById: (id) => apiFetch(`/clinical/locations/${id}`),
 };
+
+export const profileApi = {
+    exists: () => apiFetch('/clinical/profile/exists'),
+};

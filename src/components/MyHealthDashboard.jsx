@@ -1,10 +1,7 @@
 import { useState, useEffect } from 'react';
-import { useAuth } from '../contexts/AuthContext';
-import { patientApi, encounterApi, conditionApi, messageApi, locationApi } from '../services/api';
-
+import { profileApi, encounterApi, conditionApi, messageApi, locationApi } from '../services/api';
 
 export default function MyHealthDashboard() {
-    const { user } = useAuth();
     const [patientData, setPatientData] = useState(null);
     const [encounters, setEncounters] = useState([]);
     const [encountersWithLocations, setEncountersWithLocations] = useState([]);
@@ -21,25 +18,23 @@ export default function MyHealthDashboard() {
         try {
             setLoading(true);
 
-            // Hämta alla patienter och hitta den som tillhör mig
-            const allPatients = await patientApi.getAll();
-            const myPatient = Array.isArray(allPatients)
-                ? allPatients.find(p => p.userId === user.id)
-                : null;
+            // Ask backend who this user is
+            const existsResult = await profileApi.exists();
+            console.log('profile/exists in MyHealthDashboard:', existsResult);
 
-            if (!myPatient) {
-                setError('Din patientprofil hittades inte. Kontakta vårdpersonalen.');
+            if (!existsResult.exists || existsResult.profileType !== 'PATIENT') {
+                setError('Din patientprofil hittades inte, kontakta mottagningen.');
                 setLoading(false);
                 return;
             }
 
+            const myPatient = existsResult.profile;
             setPatientData(myPatient);
 
-            // Hämta min data
             const [encounterData, conditionData, messageData] = await Promise.all([
                 encounterApi.getByPatientId(myPatient.id).catch(() => []),
                 conditionApi.getByPatientId(myPatient.id).catch(() => []),
-                messageApi.getByPatientId(myPatient.id).catch(() => [])
+                messageApi.getByPatientId(myPatient.id).catch(() => []),
             ]);
 
             const encountersArray = Array.isArray(encounterData) ? encounterData : [];
@@ -47,7 +42,6 @@ export default function MyHealthDashboard() {
             setConditions(Array.isArray(conditionData) ? conditionData : []);
             setMessages(Array.isArray(messageData) ? messageData : []);
 
-            // Hämta location-data för varje encounter
             await loadEncounterLocations(encountersArray);
         } catch (err) {
             console.error('Error loading health data:', err);
@@ -67,19 +61,20 @@ export default function MyHealthDashboard() {
                             return {
                                 ...encounter,
                                 location: locationData,
-                                organization: locationData.organizationId && locationData.organizationName
-                                    ? { id: locationData.organizationId, name: locationData.organizationName }
-                                    : null
+                                organization:
+                                    locationData.organizationId && locationData.organizationName
+                                        ? { id: locationData.organizationId, name: locationData.organizationName }
+                                        : null,
                             };
-                            // eslint-disable-next-line no-unused-vars
-                        } catch (err) {
-                            console.log('Could not load location for encounter:', encounter.id);
+                        } catch {
+                            console.log('Could not load location for encounter', encounter.id);
                             return encounter;
                         }
                     }
                     return encounter;
                 })
             );
+
             setEncountersWithLocations(encountersWithLocs);
         } catch (err) {
             console.error('Error loading locations:', err);
@@ -94,7 +89,7 @@ export default function MyHealthDashboard() {
     if (error) {
         return (
             <div className="error-container">
-                <h2>⚠️ {error}</h2>
+                <h2>{error}</h2>
                 <p>Om du inte har en patientprofil, kontakta mottagningen för att få en skapad.</p>
             </div>
         );
@@ -114,12 +109,13 @@ export default function MyHealthDashboard() {
 
     return (
         <div className="my-health-dashboard">
+            {/* Dashboard header */}
             <div className="dashboard-header">
                 <h1>Min hälsoinformation</h1>
                 <p className="subtitle">Översikt över dina vårdbesök och diagnoser</p>
             </div>
 
-            {/* Snabböversikt */}
+            {/* Stats grid */}
             <div className="stats-grid">
                 <div className="stat-card">
                     <div className="stat-icon">📋</div>
@@ -128,13 +124,15 @@ export default function MyHealthDashboard() {
                         <p>Vårdbesök</p>
                     </div>
                 </div>
+
                 <div className="stat-card">
-                    <div className="stat-icon">🏥</div>
+                    <div className="stat-icon">🩺</div>
                     <div className="stat-content">
                         <h3>{activeConditions.length}</h3>
                         <p>Aktiva diagnoser</p>
                     </div>
                 </div>
+
                 <div className="stat-card">
                     <div className="stat-icon">✉️</div>
                     <div className="stat-content">
@@ -144,7 +142,7 @@ export default function MyHealthDashboard() {
                 </div>
             </div>
 
-            {/* Personuppgifter */}
+            {/* Personal info section */}
             <section className="info-section">
                 <h2>Mina uppgifter</h2>
                 <div className="info-grid">
@@ -167,14 +165,14 @@ export default function MyHealthDashboard() {
                 </div>
             </section>
 
-            {/* Aktiva diagnoser */}
+            {/* Conditions section */}
             <section className="info-section">
                 <h2>Mina diagnoser ({conditions.length})</h2>
                 {conditions.length === 0 ? (
                     <p className="empty-text">Inga diagnoser registrerade</p>
                 ) : (
                     <div className="card-list">
-                        {conditions.map(condition => (
+                        {conditions.map((condition) => (
                             <div key={condition.id} className="health-card">
                                 <div className="card-header">
                                     <h3>{condition.conditionName}</h3>
@@ -187,9 +185,9 @@ export default function MyHealthDashboard() {
                                 </div>
                                 {condition.description && <p>{condition.description}</p>}
                                 <small>
-                                    Diagnostiserad: {condition.diagnosedDate ?
-                                    new Date(condition.diagnosedDate).toLocaleDateString('sv-SE') :
-                                    'Okänt datum'}
+                                    Diagnostiserad: {condition.diagnosedDate
+                                    ? new Date(condition.diagnosedDate).toLocaleDateString('sv-SE')
+                                    : 'Okänt datum'}
                                 </small>
                             </div>
                         ))}
@@ -197,7 +195,7 @@ export default function MyHealthDashboard() {
                 )}
             </section>
 
-            {/* Vårdbesök MED LOCATION & ORGANIZATION */}
+            {/* Encounters section */}
             <section className="info-section">
                 <h2>Mina vårdbesök ({encounters.length})</h2>
                 {encountersWithLocations.length === 0 ? (
@@ -206,20 +204,20 @@ export default function MyHealthDashboard() {
                     <div className="card-list">
                         {encountersWithLocations
                             .sort((a, b) => new Date(b.encounterDate) - new Date(a.encounterDate))
-                            .map(encounter => (
+                            .map((encounter) => (
                                 <div key={encounter.id} className="health-card encounter-card">
                                     <div className="card-header">
                                         <h3>{encounter.diagnosis || 'Ingen diagnos angiven'}</h3>
                                         <span className="date-badge">
-                    {new Date(encounter.encounterDate).toLocaleDateString('sv-SE', {
-                        year: 'numeric',
-                        month: 'short',
-                        day: 'numeric'
-                    })}
-                  </span>
+                      {new Date(encounter.encounterDate).toLocaleDateString('sv-SE', {
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric'
+                      })}
+                    </span>
                                     </div>
 
-                                    {/* NYTT: Visa Location & Organization */}
+                                    {/* Location & Organization */}
                                     <div className="encounter-details">
                                         {encounter.location && (
                                             <div className="detail-item">
@@ -229,7 +227,7 @@ export default function MyHealthDashboard() {
                                         )}
                                         {encounter.organization && (
                                             <div className="detail-item">
-                                                <span className="detail-icon">🏢</span>
+                                                <span className="detail-icon">🏥</span>
                                                 <span className="detail-text">{encounter.organization.name}</span>
                                             </div>
                                         )}
@@ -247,7 +245,7 @@ export default function MyHealthDashboard() {
                 )}
             </section>
 
-            {/* Meddelanden */}
+            {/* Messages section */}
             <section className="info-section">
                 <h2>Mina meddelanden ({messages.length})</h2>
                 {messages.length === 0 ? (
@@ -257,7 +255,7 @@ export default function MyHealthDashboard() {
                         {messages
                             .sort((a, b) => new Date(b.sentAt) - new Date(a.sentAt))
                             .slice(0, 5)
-                            .map(msg => (
+                            .map((msg) => (
                                 <div key={msg.id} className={`health-card ${!msg.isRead ? 'unread' : ''}`}>
                                     <div className="card-header">
                                         <h3>{msg.subject}</h3>
@@ -265,7 +263,7 @@ export default function MyHealthDashboard() {
                                     </div>
                                     <p>{msg.content}</p>
                                     <small>
-                                        Från: {msg.senderName} • {new Date(msg.sentAt).toLocaleDateString('sv-SE', {
+                                        Från: {msg.senderName} • {new Date(msg.sentAt).toLocaleString('sv-SE', {
                                         year: 'numeric',
                                         month: 'short',
                                         day: 'numeric',
@@ -279,11 +277,17 @@ export default function MyHealthDashboard() {
                 )}
             </section>
 
-            {/* Info-ruta */}
+            {/* Info notice */}
             <div className="info-notice">
-                <h3>ℹ️ Om din hälsoinformation</h3>
-                <p>Du kan se all din registrerade hälsoinformation här. Om du har frågor eller vill ändra något, kontakta din vårdgivare.</p>
-                <p><strong>Observera:</strong> Du kan inte redigera eller ta bort information själv. Detta måste göras av vårdpersonal.</p>
+                <h3>📘 Om din hälsoinformation</h3>
+                <p>
+                    Du kan se all din registrerade hälsoinformation här.
+                    Om du har frågor eller vill ändra något, kontakta din vårdgivare.
+                </p>
+                <p>
+                    <strong>Observera:</strong> Du kan inte redigera eller ta bort information själv.
+                    Detta måste göras av vårdpersonal.
+                </p>
             </div>
         </div>
     );
