@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { patientApi } from '../services/api';
+import { patientApi, searchApi } from '../services/api';
 //import './PatientList.css';
 
 export default function PatientList() {
@@ -12,16 +12,17 @@ export default function PatientList() {
     // Search state
     const [pnr, setPnr] = useState('');
     const [name, setName] = useState('');
+    const [condition, setCondition] = useState('');
 
     const loadAll = async () => {
         setError('');
         setLoading(true);
         try {
-            const data = await patientApi.getAll();
+            // Call search without filters to get all patients
+            const data = await searchApi.searchPatients();
+
             if (Array.isArray(data)) {
                 setPatients(data);
-            } else if (data && Array.isArray(data.data)) {
-                setPatients(data.data);
             } else {
                 setPatients([]);
             }
@@ -37,14 +38,14 @@ export default function PatientList() {
         setError('');
         setLoading(true);
         try {
-            const data = await patientApi.searchByFields({
+            const data = await searchApi.searchPatients({
+                name: name.trim() || undefined,
                 pnr: pnr.trim() || undefined,
-                name: name.trim() || undefined
+                condition: condition.trim() || undefined,  // ✅ NEW
             });
+
             if (Array.isArray(data)) {
                 setPatients(data);
-            } else if (data && Array.isArray(data.data)) {
-                setPatients(data.data);
             } else {
                 setPatients([]);
             }
@@ -84,11 +85,22 @@ export default function PatientList() {
                         onChange={(e) => setName(e.target.value)}
                         className="search-input"
                     />
-                    <button onClick={runSearch} className="btn-primary">Sök</button>
+                    {/* ✅ NEW: Condition search */}
+                    <input
+                        type="text"
+                        placeholder="Diagnos (t.ex. diabetes)"
+                        value={condition}
+                        onChange={(e) => setCondition(e.target.value)}
+                        className="search-input"
+                    />
+                    <button onClick={runSearch} className="btn-primary">
+                        Sök
+                    </button>
                     <button
                         onClick={() => {
                             setPnr('');
                             setName('');
+                            setCondition('');
                             loadAll();
                         }}
                         className="btn-secondary"

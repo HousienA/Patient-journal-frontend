@@ -55,13 +55,7 @@ export const patientApi = {
     create: (data) => apiFetch('/clinical/patients', { method: 'POST', body: JSON.stringify(data) }),
     update: (id, data) => apiFetch(`/clinical/patients/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
     delete: (id) => apiFetch(`/clinical/patients/${id}`, { method: 'DELETE' }),
-    searchByFields: ({ pnr, name }) => {
-        const params = new URLSearchParams();
-        if (pnr) params.append('pnr', pnr);
-        if (name) params.append('name', name);
-        const qs = params.toString();
-        return apiFetch(`/clinical/patients/search${qs ? `?${qs}` : ''}`);
-    }
+
 };
 
 // Conditions API
@@ -136,4 +130,34 @@ export const locationApi = {
 
 export const profileApi = {
     exists: () => apiFetch('/clinical/profile/exists'),
+};
+
+// Quarkus Search API
+export const searchApi = {
+    // Search patients with multiple filters
+    searchPatients: (filters = {}) => {
+        const params = new URLSearchParams();
+        if (filters.name) params.append('name', filters.name);
+        if (filters.pnr) params.append('pnr', filters.pnr);
+        if (filters.condition) params.append('condition', filters.condition);
+
+        const qs = params.toString();
+        return apiFetch(`/search/patients${qs ? `?${qs}` : ''}`);
+    },
+
+    // Search practitioners
+    searchPractitioners: (name) => {
+        const qs = name ? `?name=${encodeURIComponent(name)}` : '';
+        return apiFetch(`/search/practitioners${qs}`);
+    },
+
+    // Get practitioner's patients
+    getPractitionerPatients: (practitionerId) =>
+        apiFetch(`/search/practitioners/${practitionerId}/patients`),
+
+    // Get practitioner's encounters
+    getPractitionerEncounters: (practitionerId, date) => {
+        const qs = date ? `?date=${date}` : '';
+        return apiFetch(`/search/practitioners/${practitionerId}/encounters${qs}`);
+    },
 };

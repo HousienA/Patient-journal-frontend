@@ -13,6 +13,10 @@ export default defineConfig({
             '/api/messages': {
                 target: 'http://localhost:8083',
                 changeOrigin: true
+            },
+            '/api/search': {
+                target: 'http://localhost:8084',
+                changeOrigin: true,
             }
         }
     }
