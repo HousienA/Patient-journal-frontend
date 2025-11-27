@@ -21,15 +21,17 @@ export default function MessageThread() {
     const loadThread = async () => {
         try {
             setLoading(true);
-            // Hämta huvudmeddelandet
+            // 1. Hämta huvudmeddelandet du klickade på
             const mainMessage = await messageApi.getById(id);
 
-            // Hämta alla meddelanden för denna patient (simulerar tråd)
+            // 2. Hämta ALLA meddelanden för denna patient
             const allMessages = await messageApi.getByPatientId(mainMessage.patientId);
 
-            // Filtrera meddelanden med samma subject (tråd)
-            const threadMessages = allMessages.filter(
-                m => m.subject === mainMessage.subject || m.subject.includes('Re:')
+
+            const threadMessages = allMessages.filter(m =>
+                // Matcha om det är samma läkare inblandad (eller om practitionerId är null, visa ändå)
+                (m.practitionerId === mainMessage.practitionerId) ||
+                (m.practitionerId == null && mainMessage.practitionerId == null)
             );
 
             setMessages(threadMessages.sort((a, b) => new Date(a.sentAt) - new Date(b.sentAt)));
@@ -40,7 +42,6 @@ export default function MessageThread() {
             setLoading(false);
         }
     };
-
     const handleSendReply = async (e) => {
         e.preventDefault();
         if (!reply.trim()) return;
@@ -49,16 +50,15 @@ export default function MessageThread() {
         setError('');
 
         try {
-            const mainMessage = messages[0];
+            const mainMessage = messages[0]; // Använd första meddelandet som referens
+            const targetPractitionerId = mainMessage.practitionerId;
 
             await messageApi.create({
                 patientId: mainMessage.patientId,
-                subject: mainMessage.subject.startsWith('Re:')
-                    ? mainMessage.subject
-                    : `Re: ${mainMessage.subject}`,
+                practitionerId: targetPractitionerId, // Behåll samma läkare i tråden
                 content: reply,
-                senderName: user.username,
-                sentAt: new Date().toISOString(),
+                senderType: user.role === 'PATIENT' ? 'PATIENT' : 'PRACTITIONER', // VIKTIGT
+                sentAt: new Date().toISOString(), // Lägg till + ':00' om din backend kräver sekunder
                 isRead: false
             });
 

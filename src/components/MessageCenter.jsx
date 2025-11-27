@@ -32,29 +32,47 @@ export default function MessageCenter() {
             setLoading(true);
             setError('');
 
-            // find own patient id and load only own messages
+
+            const practitionerList = await practitionerApi.getAll();
+            setPractitioners(Array.isArray(practitionerList) ? practitionerList : []);
+
             if (user.role === 'PATIENT') {
+                // 1. Hitta Patient-ID för inloggad användare
                 const allPatients = await patientApi.getAll();
                 const myPatient = Array.isArray(allPatients)
-                    ? allPatients.find((p) => p.userId === user.id)
+                    ? allPatients.find((p) => p.authId === user.id || p.userId === user.id) // Dubbelkolla vilket fält du använder för Auth ID
                     : null;
 
                 if (myPatient) {
                     setMyPatientId(myPatient.id);
+                    // Hämta bara mina meddelanden
                     const myMessages = await messageApi.getByPatientId(myPatient.id);
                     setMessages(Array.isArray(myMessages) ? myMessages : []);
                 } else {
-                    setMessages([]);
+                    setMessages([]); // Ingen profil hittad
                 }
 
-                // load practitioners for receiver dropdown
-                const practitionerList = await practitionerApi.getAll();
-                setPractitioners(Array.isArray(practitionerList) ? practitionerList : []);
+            } else if (user.role === 'DOCTOR') {
+                // 2. Hitta Practitioner-ID för inloggad läkare
+                // Vi letar i listan vi just hämtade
+                const myPractitioner = Array.isArray(practitionerList)
+                    ? practitionerList.find((p) => p.authId === user.id || p.userId === user.id)
+                    : null;
+
+                if (myPractitioner) {
+                    // Hämta bara meddelanden skickade till MIG
+                    const myMessages = await messageApi.getByPractitionerId(myPractitioner.id);
+                    setMessages(Array.isArray(myMessages) ? myMessages : []);
+                } else {
+                    // Fallback: Om vi inte hittar profilen, visa ingenting (eller alla om du vill testa)
+                    setMessages([]);
+                }
             } else {
-                // DOCTOR / STAFF see all messages
+                // STAFF (Personal) kanske ska se allt?
                 const data = await messageApi.getAll();
                 setMessages(Array.isArray(data) ? data : []);
             }
+
         } catch (err) {
             console.error('Error loading messages:', err);
             setError('Kunde inte ladda meddelanden');
@@ -62,6 +80,7 @@ export default function MessageCenter() {
             setLoading(false);
         }
     };
+
 
     const handleSend = async (e) => {
         e.preventDefault();
@@ -101,13 +120,14 @@ export default function MessageCenter() {
                 subjectToSend = `Till ${receiverName}: ${subjectToSend}`;
             }
 
-            // Payload exactly as backend MessageDTO expects
+            const finalContent = `Ämne: ${subjectToSend}\n\n${newMessage.content.trim()}`;
+
             await messageApi.create({
                 patientId: patientIdToUse,
-                subject: subjectToSend,
-                content: newMessage.content.trim(),
-                senderName: user.username,
-                sentAt: new Date().toISOString(),
+                practitionerId: user.role === 'PATIENT' ? parseInt(newMessage.receiverPractitionerId) : null, // Lägg till mottagande läkare
+                content: finalContent,
+                senderType: user.role === 'PATIENT' ? 'PATIENT' : 'PRACTITIONER', // VIKTIGT: Detta fält krävs av backend
+                sentAt: new Date().toISOString(), // Backend verkar klara ISO-datum här, annars lägg till + ':00'
                 isRead: false,
             });
 
