@@ -316,6 +316,15 @@ function App() {
                         }
                     />
 
+                    <Route
+                        path="/conditions/:id/edit"
+                        element={
+                            <ProtectedRoute roles={['DOCTOR', 'STAFF']}>
+                                <ConditionForm />
+                            </ProtectedRoute>
+                        }
+                    />
+
                     {/* Observation Routes */}
                     <Route
                         path="/observations/new"

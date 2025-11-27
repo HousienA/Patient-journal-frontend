@@ -92,7 +92,7 @@ export default function ObservationForm() {
                 observationType: form.observationType,
                 value: form.value,
                 unit: form.unit || null,
-                observedAt: form.observedAt || new Date().toISOString()
+                observedAt: form.observedAt ? (form.observedAt.length === 16 ? form.observedAt + ':00' : form.observedAt) : new Date().toISOString()
             };
 
             if (isEdit) {
