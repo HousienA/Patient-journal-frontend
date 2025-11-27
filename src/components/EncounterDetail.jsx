@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import {encounterApi, observationApi, locationApi, organizationApi} from '../services/api';
+import {encounterApi, observationApi, locationApi, organizationApi, imageApi} from '../services/api';
 //import './EncounterDetail.css';
 
 export default function EncounterDetail() {
@@ -12,6 +12,7 @@ export default function EncounterDetail() {
     const [organization, setOrganization] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [images, setImages] = useState([]);
 
     useEffect(() => {
         loadEncounterData();
@@ -27,6 +28,9 @@ export default function EncounterDetail() {
 
             setEncounter(encounterData);
             setObservations(Array.isArray(observationData) ? observationData : []);
+
+            const imagesData = await imageApi.getByEncounterId(id);
+            setImages(imagesData || []);
 
 
             if (encounterData.locationId) {
@@ -159,6 +163,54 @@ export default function EncounterDetail() {
                     </div>
                 )}
             </section>
+
+            <section className="info-section">
+                <div className="section-header">
+                    <h2>Bilder ({images.length})</h2>
+                    {/* Knapp för att ladda upp NY bild */}
+                    <button
+                        className="btn-primary"
+                        onClick={() => navigate(`/encounters/${id}/upload-image`)} // Du behöver kanske skapa denna sida också?
+                    >
+                        + Ladda upp bild
+                    </button>
+                </div>
+
+                <div className="image-grid" style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+                    gap: '20px',
+                    marginTop: '15px'
+                }}>
+                    {images.length === 0 ? (
+                        <p className="empty-text">Inga bilder uppladdade för detta besök.</p>
+                    ) : (
+                        images.map(img => (
+                            <div key={img.id} className="image-card"
+                                 style={{border: '1px solid #eee', padding: '10px', borderRadius: '8px'}}>
+                                <img
+                                    src={img.url}
+                                    alt="Klinisk bild"
+                                    style={{width: '100%', height: '150px', objectFit: 'cover', borderRadius: '4px'}}
+                                />
+                                <p style={{
+                                    fontSize: '0.9rem',
+                                    margin: '5px 0'
+                                }}>{img.description || 'Ingen beskrivning'}</p>
+
+                                <button
+                                    onClick={() => navigate(`/images/${img.id}/edit`)}
+                                    className="btn-secondary"
+                                    style={{width: '100%', marginTop: '5px'}}
+                                >
+                                    🖊️ Rita / Anteckna
+                                </button>
+                            </div>
+                        ))
+                    )}
+                </div>
+            </section>
+
         </div>
     );
 }

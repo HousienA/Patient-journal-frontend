@@ -1,5 +1,7 @@
 const API_BASE = '/api';
 
+const IMAGE_API_BASE = import.meta.env.VITE_IMAGE_API_URL || 'http://localhost:8084';
+
 
 function getAccessToken() {
     const key = `oidc.user:http://localhost:8080/realms/journal-realm:backend-service`;
@@ -42,6 +44,31 @@ async function apiFetch(endpoint, options = {}) {
 
 
     if (response.status === 204) return null;
+
+    return response.json();
+}
+
+// Image API (Går till Image Service)
+async function imageApiFetch(endpoint, options = {}) {
+    const token = getAccessToken();
+
+    const config = {
+        ...options,
+        headers: {
+            // För bilduppladdning (FormData) ska man INTE sätta Content-Type manuellt,
+            // så vi kollar om body är FormData
+            ...(options.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
+            ...(token && { 'Authorization': `Bearer ${token}` }), // Om du lagt till auth i Node-tjänsten
+            ...options.headers,
+        },
+    };
+
+    const response = await fetch(`${IMAGE_API_BASE}${endpoint}`, config);
+
+    if (!response.ok) {
+        const error = await response.json().catch(() => ({ error: 'Image API error' }));
+        throw new Error(error.error || 'Kunde inte nå bildtjänsten');
+    }
 
     return response.json();
 }
@@ -130,6 +157,35 @@ export const locationApi = {
 
 export const profileApi = {
     exists: () => apiFetch('/clinical/profile/exists'),
+};
+
+
+// Image API (Går till Image Service)
+export const imageApi = {
+    // Ladda upp en ny bild
+    // OBS: data ska vara ett FormData-objekt
+    upload: (formData) => imageApiFetch('/images/upload', {
+        method: 'POST',
+        body: formData
+    }),
+
+    // Hämta bild-metadata + URL
+    getById: (id) => imageApiFetch(`/images/${id}`),
+
+    // Spara annoteringar (ritningar)
+    saveAnnotations: (id, annotations) => imageApiFetch(`/images/${id}/annotate`, {
+        method: 'PUT',
+        body: JSON.stringify({ annotations })
+    }),
+
+    // Hämta alla bilder för en patient
+    getByPatientId: (patientId) => imageApiFetch(`/images/patient/${patientId}`),
+
+    // Hämta alla bilder för ett vårdmöte (Encounter)
+    // OBS: Din Node.js-kod måste ha denna endpoint.
+    // Om du inte skapat den i Node än, kan du filtrera patientens bilder i frontend istället,
+    // men det är snyggare att ha en endpoint:
+    getByEncounterId: (encounterId) => imageApiFetch(`/images/encounter/${encounterId}`),
 };
 
 // Quarkus Search API

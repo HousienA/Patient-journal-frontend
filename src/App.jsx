@@ -17,6 +17,8 @@ import EncounterDetail from './components/EncounterDetail';
 import MessageThread from './components/MessageThread.jsx';
 import MyHealthDashboard from './components/MyHealthDashboard.jsx';
 import AdminPanel from './components/AdminPanel.jsx';
+import ImageEditorPage from "./components/ImageEditorPage.jsx";
+import ImageUploadPage from "./components/ImageUploadPage.jsx";
 
 // Protected Route wrapper
 function ProtectedRoute({ children, roles = null }) {
@@ -380,6 +382,25 @@ function App() {
                             </ProtectedRoute>
                         }
                     />
+
+                    {/* Image Routes */}
+                    <Route
+                        path="/images/:imageId/edit"
+                        element={
+                            <ProtectedRoute roles={['DOCTOR', 'STAFF']}>
+                                <ImageEditorPage />
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="/encounters/:encounterId/upload-image"
+                        element={
+                            <ProtectedRoute roles={['DOCTOR', 'STAFF']}>
+                                <ImageUploadPage />
+                            </ProtectedRoute>
+                        }
+                    />
+
 
                     {/* 404 */}
                     <Route path="*" element={<div className="error-page">Sidan hittades inte</div>} />
