@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { patientApi, encounterApi, conditionApi } from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
 //import './PatientDetail.css';
 
 export default function PatientDetail() {
     const { id } = useParams();
     const navigate = useNavigate();
+    const { user } = useAuth();
     const [patient, setPatient] = useState(null);
     const [encounters, setEncounters] = useState([]);
     const [conditions, setConditions] = useState([]);
@@ -40,8 +42,34 @@ export default function PatientDetail() {
         }
     };
 
+    const handleAssignToMe = async () => {
+        if (!user || !user.id) return;
+
+        try {
+            // Vi skickar bara med det vi vill uppdatera
+            // Men backend updatePatient förväntar sig kanske hela objektet eller hanterar partiell uppdatering?
+            // Vår backend-kod: existing.setFullName(updatedData.getFullName()); etc.
+            // Den verkar skriva över allt om det är null.
+            // Så vi bör skicka med nuvarande data + ny practitioner.
+
+            const updatedPatient = {
+                ...patient,
+                primaryPractitioner: { id: user.id } // user.id kommer från AuthContext (dbProfile)
+            };
+
+            await patientApi.update(patient.id, updatedPatient);
+
+            // Ladda om data
+            loadPatientData();
+            alert("Du är nu ansvarig läkare för denna patient.");
+        } catch (err) {
+            console.error("Failed to assign practitioner", err);
+            alert("Kunde inte tilldela läkare: " + err.message);
+        }
+    };
+
     const getStatusLabel = (status) => {
-        switch(status) {
+        switch (status) {
             case 'ACTIVE': return 'Aktiv';
             case 'CHRONIC': return 'Kronisk';
             case 'UNDERTREATMENT': return 'Under behandling';
@@ -93,6 +121,24 @@ export default function PatientDetail() {
                         <label>Patient-ID</label>
                         <p>#{patient.id}</p>
                     </div>
+                    <div className="info-item">
+                        <label>Ansvarig läkare</label>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <p style={{ margin: 0 }}>
+                                {patient.primaryPractitioner ? patient.primaryPractitioner.fullName : 'Ej tilldelad'}
+                            </p>
+                            {/* Visa knapp om användaren är läkare och INTE redan är ansvarig */}
+                            {user?.role === 'DOCTOR' && patient.primaryPractitioner?.id !== user.id && (
+                                <button
+                                    onClick={handleAssignToMe}
+                                    className="btn-small btn-secondary"
+                                    title="Bli ansvarig läkare för denna patient"
+                                >
+                                    Ta över ansvaret
+                                </button>
+                            )}
+                        </div>
+                    </div>
                 </div>
             </section>
 
@@ -116,9 +162,9 @@ export default function PatientDetail() {
                                 <div className="card-header">
                                     <h3>{condition.conditionName}</h3>
                                     <div className="card-actions">
-              <span className={`status-badge status-${condition.status.toLowerCase()}`}>
-                {getStatusLabel(condition.status)}
-              </span>
+                                        <span className={`status-badge status-${condition.status.toLowerCase()}`}>
+                                            {getStatusLabel(condition.status)}
+                                        </span>
                                         <button
                                             onClick={() => navigate(`/conditions/${condition.id}/edit`)}
                                             className="btn-icon"
@@ -131,8 +177,8 @@ export default function PatientDetail() {
                                 {condition.description && <p>{condition.description}</p>}
                                 <small>
                                     Diagnostiserad: {condition.diagnosedDate ?
-                                    new Date(condition.diagnosedDate).toLocaleDateString('sv-SE') :
-                                    'Okänt datum'}
+                                        new Date(condition.diagnosedDate).toLocaleDateString('sv-SE') :
+                                        'Okänt datum'}
                                 </small>
                             </div>
                         ))}
@@ -165,8 +211,8 @@ export default function PatientDetail() {
                                 <div className="card-header">
                                     <h3>{encounter.diagnosis || 'Ingen diagnos angiven'}</h3>
                                     <span className="date-badge">
-              {new Date(encounter.encounterDate).toLocaleDateString('sv-SE')}
-            </span>
+                                        {new Date(encounter.encounterDate).toLocaleDateString('sv-SE')}
+                                    </span>
                                 </div>
                                 {encounter.notes && <p>{encounter.notes}</p>}
                                 <div className="encounter-hint">

@@ -132,8 +132,11 @@ export const practitionerApi = {
     getAll: () => apiFetch('/clinical/practitioners'),
     getById: (id) => apiFetch(`/clinical/practitioners/${id}`),
     create: (data) => apiFetch('/clinical/practitioners', { method: 'POST', body: JSON.stringify(data) }),
-    // delete fanns inte i din senaste controller, men om du lagt till den:
-    // delete: (id) => apiFetch(`/clinical/practitioners/${id}`, { method: 'DELETE' }),
+    getPatients: (id) => apiFetch(`/clinical/practitioners/${id}/patients`),
+    getEncounters: (id, date) => {
+        const qs = date ? `?date=${date}` : '';
+        return apiFetch(`/clinical/practitioners/${id}/encounters${qs}`);
+    },
 };
 
 // Organizations & Locations API

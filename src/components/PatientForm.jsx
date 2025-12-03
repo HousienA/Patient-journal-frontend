@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { patientApi } from '../services/api';
+import { patientApi, practitionerApi } from '../services/api';
 //import './PatientForm.css';
 
 export default function PatientForm() {
@@ -9,10 +9,19 @@ export default function PatientForm() {
         fullName: '',
         personalNumber: '',
         email: '',
-        phone: ''
+        phone: '',
+        primaryPractitionerId: ''
     });
+    const [practitioners, setPractitioners] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+
+    useEffect(() => {
+        // Hämta lista på läkare för dropdown
+        practitionerApi.getAll().then(data => {
+            if (Array.isArray(data)) setPractitioners(data);
+        }).catch(err => console.error("Failed to load practitioners", err));
+    }, []);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -38,13 +47,16 @@ export default function PatientForm() {
         setLoading(true);
 
         try {
-            await patientApi.create({
+            const payload = {
                 fullName: form.fullName.trim(),
                 personalNumber: form.personalNumber.trim(),
                 email: form.email.trim() || null,
                 phone: form.phone.trim() || null,
-                userId: null  // Patient skapas utan användarkonto
-            });
+                userId: null,
+                primaryPractitioner: form.primaryPractitionerId ? { id: parseInt(form.primaryPractitionerId) } : null
+            };
+
+            await patientApi.create(payload);
 
             // Navigera tillbaka till listan
             navigate('/patients');
@@ -131,6 +143,24 @@ export default function PatientForm() {
                     />
                 </div>
 
+                <div className="form-group">
+                    <label htmlFor="primaryPractitionerId">
+                        Ansvarig läkare <span className="optional">(valfritt)</span>
+                    </label>
+                    <select
+                        id="primaryPractitionerId"
+                        name="primaryPractitionerId"
+                        value={form.primaryPractitionerId}
+                        onChange={handleChange}
+                    >
+                        <option value="">-- Välj läkare --</option>
+                        {practitioners.map(p => (
+                            <option key={p.id} value={p.id}>
+                                {p.fullName}
+                            </option>
+                        ))}
+                    </select>
+                </div>
 
                 <div className="form-actions">
                     <button

@@ -229,7 +229,7 @@ function App() {
                             <Link to="/messages">Meddelanden</Link>
                         </nav>
 
-                        <div className="user-info">
+                        <div className="user-info" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                             <span className="username">{username}</span>
                             <span className="user-role">{userRole}</span>
                             <button onClick={handleLogout} className="logout-btn">

@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { patientApi, searchApi } from '../services/api';
+import { patientApi, searchApi, practitionerApi } from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
 //import './PatientList.css';
 
 export default function PatientList() {
     const navigate = useNavigate();
+    const { user } = useAuth();
     const [patients, setPatients] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
@@ -13,13 +15,19 @@ export default function PatientList() {
     const [pnr, setPnr] = useState('');
     const [name, setName] = useState('');
     const [condition, setCondition] = useState('');
+    const [showMyPatients, setShowMyPatients] = useState(false);
 
     const loadAll = async () => {
         setError('');
         setLoading(true);
         try {
-            // Call search without filters to get all patients
-            const data = await searchApi.searchPatients();
+            let data;
+            if (showMyPatients && user?.id && user?.role === 'DOCTOR') {
+                data = await practitionerApi.getPatients(user.id);
+            } else {
+                // Call search without filters to get all patients
+                data = await searchApi.searchPatients();
+            }
 
             if (Array.isArray(data)) {
                 setPatients(data);
@@ -38,14 +46,35 @@ export default function PatientList() {
         setError('');
         setLoading(true);
         try {
+            // Om man söker, så söker vi i hela systemet via Search API (Quarkus)
+            // Eller vill vi söka BARA i mina patienter?
+            // För enkelhetens skull: Sökning går alltid mot Search API just nu.
+            // Men om "Mina patienter" är vald och inga sökord finns, ladda mina.
+
+            if (showMyPatients && !name && !pnr && !condition && user?.id) {
+                const data = await practitionerApi.getPatients(user.id);
+                setPatients(data || []);
+                setLoading(false);
+                return;
+            }
+
             const data = await searchApi.searchPatients({
                 name: name.trim() || undefined,
                 pnr: pnr.trim() || undefined,
-                condition: condition.trim() || undefined,  // ✅ NEW
+                condition: condition.trim() || undefined,
             });
 
             if (Array.isArray(data)) {
-                setPatients(data);
+                // Om vi vill filtrera sökresultatet på klienten för "Mina patienter":
+                if (showMyPatients && user?.id) {
+                    // Detta kräver att searchApi returnerar primaryPractitionerId, vilket vi inte vet säkert.
+                    // Så vi kanske ska nöja oss med att "Sök" söker globalt, och "Mina patienter" listar mina.
+                    // Men vi kan försöka filtrera om datat har infon.
+                    const myPatients = data.filter(p => p.primaryPractitioner?.id === user.id);
+                    setPatients(myPatients);
+                } else {
+                    setPatients(data);
+                }
             } else {
                 setPatients([]);
             }
@@ -57,7 +86,7 @@ export default function PatientList() {
         }
     };
 
-    useEffect(() => { loadAll(); }, []);
+    useEffect(() => { loadAll(); }, [showMyPatients, user?.id, user?.role]);
 
     if (loading) return <div className="loading">Laddar patienter...</div>;
     if (error) return <div className="error-message">{error}</div>;
@@ -66,6 +95,19 @@ export default function PatientList() {
         <div className="patient-list">
             <div className="list-header">
                 <h2>Patienter ({patients.length})</h2>
+                {user?.role === 'DOCTOR' && (
+                    <div className="filter-toggle" style={{ display: 'flex', alignItems: 'center' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', margin: 0 }}>
+                            <input
+                                type="checkbox"
+                                checked={showMyPatients}
+                                onChange={(e) => setShowMyPatients(e.target.checked)}
+                                style={{ margin: 0 }}
+                            />
+                            <span>Visa endast mina patienter</span>
+                        </label>
+                    </div>
+                )}
             </div>
 
             {/* Search Bar */}
@@ -85,7 +127,6 @@ export default function PatientList() {
                         onChange={(e) => setName(e.target.value)}
                         className="search-input"
                     />
-                    {/* ✅ NEW: Condition search */}
                     <input
                         type="text"
                         placeholder="Diagnos (t.ex. diabetes)"
@@ -101,6 +142,8 @@ export default function PatientList() {
                             setPnr('');
                             setName('');
                             setCondition('');
+                            // loadAll triggas av useEffect när vi rensar, om vi vill resetta allt
+                            // Men här vill vi bara rensa fälten och ladda om listan baserat på checkbox
                             loadAll();
                         }}
                         className="btn-secondary"
@@ -121,7 +164,7 @@ export default function PatientList() {
                         <div
                             key={patient.id}
                             className="patient-card"
-                            style={{marginBottom: '16px', cursor: 'pointer'}}
+                            style={{ marginBottom: '16px', cursor: 'pointer' }}
                             onClick={() => navigate(`${patient.id}`)}
                         >
                             <div className="patient-card-header">
@@ -132,6 +175,9 @@ export default function PatientList() {
                                 <p><strong>Personnummer:</strong> {patient.personalNumber}</p>
                                 {patient.email && <p><strong>Email:</strong> {patient.email}</p>}
                                 {patient.phone && <p><strong>Telefon:</strong> {patient.phone}</p>}
+                                {patient.primaryPractitioner && (
+                                    <p><strong>Läkare:</strong> {patient.primaryPractitioner.fullName}</p>
+                                )}
                             </div>
                         </div>
                     ))}
