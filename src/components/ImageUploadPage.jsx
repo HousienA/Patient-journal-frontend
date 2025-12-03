@@ -32,9 +32,6 @@ export default function ImageUploadPage() {
             const formData = new FormData();
             formData.append('image', file);
             formData.append('encounterId', encounterId);
-            // Vi borde nog skicka med patientId också, men vi har det inte i URL:en just nu.
-            // Node-tjänsten kanske klarar sig med bara encounterId om vi bara filtrerar på det.
-            // (Vill du vara supernoga borde du hämta Encounter först för att få patientId, men vi kör enkelt nu)
             formData.append('description', description);
 
             // 2. Skicka till Node-tjänsten

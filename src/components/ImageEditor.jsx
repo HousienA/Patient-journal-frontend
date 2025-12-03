@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import CanvasDraw from 'react-canvas-draw';
 
-// OBS: Byt ut om du kör på annan URL i prod
+
 const ImageServiceURL = import.meta.env.VITE_IMAGE_API_URL || 'http://localhost:8084';
 
 export default function ImageEditor({ imageId, onSave }) {
