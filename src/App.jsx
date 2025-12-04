@@ -3,6 +3,9 @@ import { useAuth } from 'react-oidc-context';
 import { useEffect, useState } from 'react';
 import './App.css';
 
+// Import the API helper instead of using fetch directly
+import { profileApi } from './services/api';
+
 // Components
 import Login from './components/Login';
 import OnboardingFlow from './components/OnboardingFlow';
@@ -35,42 +38,35 @@ function ProtectedRoute({ children, roles = null }) {
                 return;
             }
 
-            // If already checked this session, don't repeat
             if (sessionStorage.getItem('onboarding-checked') === 'true') {
                 setChecking(false);
                 return;
             }
 
-            // Do not check while actually on onboarding route
             if (location.pathname === '/onboarding') {
                 setChecking(false);
                 return;
             }
 
             try {
-                const token = auth.user.access_token;
-                const response = await fetch('http://localhost:8082/api/clinical/profile/exists', {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                    },
-                });
+                // FIX: Use profileApi.exists() which handles the URL correctly via Nginx
+                const data = await profileApi.exists();
 
-                if (response.ok) {
-                    const data = await response.json();
-                    console.log('profile/exists response:', data);
+                console.log('profile-exists response:', data);
 
-                    if (!data.exists) {
-                        setNeedsOnboarding(true);
-                        sessionStorage.setItem('onboarding-checked', 'true');
-                        navigate('/onboarding', { replace: true });
-                        return;
-                    } else {
-                        setNeedsOnboarding(false);
-                        sessionStorage.setItem('onboarding-checked', 'true');
-                    }
+                if (!data.exists) {
+                    setNeedsOnboarding(true);
+                    sessionStorage.setItem('onboarding-checked', 'true');
+                    navigate('/onboarding', { replace: true });
+                    return;
+                } else {
+                    setNeedsOnboarding(false);
+                    sessionStorage.setItem('onboarding-checked', 'true');
                 }
             } catch (err) {
                 console.error('Error checking profile:', err);
+                // Optional: If error is 401, we might want to force logout,
+                // but for now we let it fail safely so the user sees the error on dashboard
             } finally {
                 setChecking(false);
             }
@@ -116,10 +112,8 @@ function ProtectedRoute({ children, roles = null }) {
     return children;
 }
 
-// Dashboard component
 function Dashboard() {
     const auth = useAuth();
-
     if (!auth.isAuthenticated) {
         return null;
     }

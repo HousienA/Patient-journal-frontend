@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from 'react-oidc-context';
 import { useNavigate } from 'react-router-dom';
+import { onboardingApi } from '../services/api';
 import './OnboardingFlow.css';
 
 export default function OnboardingFlow() {
@@ -62,20 +63,7 @@ export default function OnboardingFlow() {
         }
 
         try {
-            const token = auth.user.access_token;
-            const response = await fetch('http://localhost:8082/api/clinical/onboarding/patient', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify(patientForm)
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'Failed to create profile');
-            }
+            await onboardingApi.completePatient(patientForm);
 
             // Success - redirect to dashboard
             navigate('/', { replace: true });
@@ -93,20 +81,7 @@ export default function OnboardingFlow() {
         setError('');
 
         try {
-            const token = auth.user.access_token;
-            const response = await fetch('http://localhost:8082/api/clinical/onboarding/practitioner', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify(practitionerForm)
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'Failed to create profile');
-            }
+            await onboardingApi.completePractitioner(practitionerForm);
 
             // Success - redirect to dashboard
             navigate('/', { replace: true });
@@ -156,7 +131,7 @@ export default function OnboardingFlow() {
                                 type="text"
                                 id="fullName"
                                 value={patientForm.fullName}
-                                onChange={e => setPatientForm({...patientForm, fullName: e.target.value})}
+                                onChange={e => setPatientForm({ ...patientForm, fullName: e.target.value })}
                                 placeholder="För- och efternamn"
                                 required
                                 maxLength={200}
@@ -171,7 +146,7 @@ export default function OnboardingFlow() {
                                 type="text"
                                 id="personalNumber"
                                 value={patientForm.personalNumber}
-                                onChange={e => setPatientForm({...patientForm, personalNumber: e.target.value})}
+                                onChange={e => setPatientForm({ ...patientForm, personalNumber: e.target.value })}
                                 placeholder="YYYYMMDD-XXXX"
                                 required
                             />
@@ -186,7 +161,7 @@ export default function OnboardingFlow() {
                                 type="email"
                                 id="email"
                                 value={patientForm.email}
-                                onChange={e => setPatientForm({...patientForm, email: e.target.value})}
+                                onChange={e => setPatientForm({ ...patientForm, email: e.target.value })}
                                 placeholder="din@email.com"
                                 maxLength={255}
                             />
@@ -200,7 +175,7 @@ export default function OnboardingFlow() {
                                 type="tel"
                                 id="phone"
                                 value={patientForm.phone}
-                                onChange={e => setPatientForm({...patientForm, phone: e.target.value})}
+                                onChange={e => setPatientForm({ ...patientForm, phone: e.target.value })}
                                 placeholder="070-123 45 67"
                                 maxLength={50}
                             />
@@ -229,7 +204,7 @@ export default function OnboardingFlow() {
                                 type="text"
                                 id="fullName"
                                 value={practitionerForm.fullName}
-                                onChange={e => setPractitionerForm({...practitionerForm, fullName: e.target.value})}
+                                onChange={e => setPractitionerForm({ ...practitionerForm, fullName: e.target.value })}
                                 placeholder="Dr. För- och efternamn"
                                 required
                                 maxLength={200}
@@ -244,7 +219,7 @@ export default function OnboardingFlow() {
                                 type="email"
                                 id="email"
                                 value={practitionerForm.email}
-                                onChange={e => setPractitionerForm({...practitionerForm, email: e.target.value})}
+                                onChange={e => setPractitionerForm({ ...practitionerForm, email: e.target.value })}
                                 placeholder="din@sjukhus.se"
                                 maxLength={255}
                             />
@@ -258,7 +233,7 @@ export default function OnboardingFlow() {
                                 type="tel"
                                 id="phone"
                                 value={practitionerForm.phone}
-                                onChange={e => setPractitionerForm({...practitionerForm, phone: e.target.value})}
+                                onChange={e => setPractitionerForm({ ...practitionerForm, phone: e.target.value })}
                                 placeholder="070-123 45 67"
                                 maxLength={50}
                             />

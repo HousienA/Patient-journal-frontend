@@ -2,7 +2,7 @@ import React, { useRef, useState, useEffect } from 'react';
 import CanvasDraw from 'react-canvas-draw';
 
 
-const ImageServiceURL = import.meta.env.VITE_IMAGE_API_URL || 'http://localhost:8084';
+import { imageApi } from '../services/api';
 
 export default function ImageEditor({ imageId, onSave }) {
     const [imageData, setImageData] = useState(null);
@@ -24,8 +24,7 @@ export default function ImageEditor({ imageId, onSave }) {
 
     const loadImage = async () => {
         try {
-            const res = await fetch(`${ImageServiceURL}/images/${imageId}`);
-            const data = await res.json();
+            const data = await imageApi.getById(imageId);
             setImageData(data);
             if (data.texts && Array.isArray(data.texts)) {
                 setTexts(data.texts);
@@ -38,14 +37,7 @@ export default function ImageEditor({ imageId, onSave }) {
     const handleSave = async () => {
         const saveData = canvasRef.current.getSaveData();
 
-        await fetch(`${ImageServiceURL}/images/${imageId}/annotate`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                annotations: saveData,
-                texts: texts // Skicka med texterna också
-            })
-        });
+        await imageApi.saveAnnotations(imageId, saveData, texts);
 
         alert('Bild och text sparad!');
         if (onSave) onSave();
@@ -138,7 +130,7 @@ export default function ImageEditor({ imageId, onSave }) {
                     </button>
                 </div>
 
-                {isTextMode && <small style={{display:'block', marginTop:'5px'}}>Klicka på bilden för att lägga till text.</small>}
+                {isTextMode && <small style={{ display: 'block', marginTop: '5px' }}>Klicka på bilden för att lägga till text.</small>}
             </div>
 
             {/* Bildyta */}

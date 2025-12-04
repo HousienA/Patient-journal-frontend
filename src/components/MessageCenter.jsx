@@ -18,6 +18,7 @@ export default function MessageCenter() {
     });
 
     const [myPatientId, setMyPatientId] = useState(null);
+    const [myPractitionerId, setMyPractitionerId] = useState(null); // Stores the logged-in doctor's ID
     const [practitioners, setPractitioners] = useState([]);
     const [loading, setLoading] = useState(true);
     const [sending, setSending] = useState(false);
@@ -32,43 +33,40 @@ export default function MessageCenter() {
             setLoading(true);
             setError('');
 
-
             const practitionerList = await practitionerApi.getAll();
             setPractitioners(Array.isArray(practitionerList) ? practitionerList : []);
 
             if (user.role === 'PATIENT') {
-                // 1. Hitta Patient-ID för inloggad användare
+                // 1. Find Patient-ID for logged in user
                 const allPatients = await patientApi.getAll();
                 const myPatient = Array.isArray(allPatients)
-                    ? allPatients.find((p) => p.authId === user.id || p.userId === user.id) // Dubbelkolla vilket fält du använder för Auth ID
+                    ? allPatients.find((p) => p.authId === user.id || p.userId === user.id)
                     : null;
 
                 if (myPatient) {
                     setMyPatientId(myPatient.id);
-                    // Hämta bara mina meddelanden
+                    // Get messages for this patient
                     const myMessages = await messageApi.getByPatientId(myPatient.id);
                     setMessages(Array.isArray(myMessages) ? myMessages : []);
                 } else {
-                    setMessages([]); // Ingen profil hittad
+                    setMessages([]); // No profile found
                 }
 
             } else if (user.role === 'DOCTOR') {
-                // 2. Hitta Practitioner-ID för inloggad läkare
-                // Vi letar i listan vi just hämtade
+                // 2. Find Practitioner-ID for logged in doctor
                 const myPractitioner = Array.isArray(practitionerList)
                     ? practitionerList.find((p) => p.authId === user.id || p.userId === user.id)
                     : null;
 
                 if (myPractitioner) {
-                    // Hämta bara meddelanden skickade till MIG
+                    setMyPractitionerId(myPractitioner.id); // <--- Save this ID for sending messages later
                     const myMessages = await messageApi.getByPractitionerId(myPractitioner.id);
                     setMessages(Array.isArray(myMessages) ? myMessages : []);
                 } else {
-                    // Fallback: Om vi inte hittar profilen, visa ingenting (eller alla om du vill testa)
                     setMessages([]);
                 }
             } else {
-                // STAFF (Personal) kanske ska se allt?
+                // STAFF - Show all messages
                 const data = await messageApi.getAll();
                 setMessages(Array.isArray(data) ? data : []);
             }
@@ -81,53 +79,64 @@ export default function MessageCenter() {
         }
     };
 
-
     const handleSend = async (e) => {
         e.preventDefault();
         setError('');
         setSending(true);
 
         try {
-            // Use own patientId
+            // Determine Patient ID
             const patientIdToUse =
                 user.role === 'PATIENT' ? myPatientId : parseInt(newMessage.patientId, 10);
 
             if (!patientIdToUse || Number.isNaN(patientIdToUse)) {
                 setError('Patient-ID måste anges');
+                setSending(false);
                 return;
             }
 
             if (!newMessage.subject.trim()) {
                 setError('Ämne får inte vara tomt');
+                setSending(false);
                 return;
             }
             if (!newMessage.content.trim()) {
                 setError('Meddelande får inte vara tomt');
+                setSending(false);
                 return;
             }
 
-            // For patients: receiver selection for doctor
+            // Determine Practitioner ID
+            // If Patient: use the selected receiver from dropdown
+            // If Doctor: use MY own ID
+            let practitionerIdToUse = null;
             let subjectToSend = newMessage.subject.trim();
+
             if (user.role === 'PATIENT') {
                 if (!newMessage.receiverPractitionerId) {
                     setError('Du måste välja vilken läkare du vill skicka till');
+                    setSending(false);
                     return;
                 }
-                const receiver = practitioners.find(
-                    (p) => p.id === Number.parseInt(newMessage.receiverPractitionerId, 10)
-                );
+                practitionerIdToUse = parseInt(newMessage.receiverPractitionerId, 10);
+
+                // Add receiver name to subject for clarity
+                const receiver = practitioners.find((p) => p.id === practitionerIdToUse);
                 const receiverName = receiver?.fullName || 'okänd läkare';
                 subjectToSend = `Till ${receiverName}: ${subjectToSend}`;
+            } else {
+                // I am a Doctor sending a message
+                practitionerIdToUse = myPractitionerId;
             }
 
             const finalContent = `Ämne: ${subjectToSend}\n\n${newMessage.content.trim()}`;
 
             await messageApi.create({
                 patientId: patientIdToUse,
-                practitionerId: user.role === 'PATIENT' ? parseInt(newMessage.receiverPractitionerId) : null, // Lägg till mottagande läkare
+                practitionerId: practitionerIdToUse, // <--- FIXED: Now uses the variable, not null
                 content: finalContent,
-                senderType: user.role === 'PATIENT' ? 'PATIENT' : 'PRACTITIONER', // VIKTIGT: Detta fält krävs av backend
-                sentAt: new Date().toISOString(), // Backend verkar klara ISO-datum här, annars lägg till + ':00'
+                senderType: user.role === 'PATIENT' ? 'PATIENT' : 'PRACTITIONER',
+                sentAt: new Date().toISOString(),
                 isRead: false,
             });
 

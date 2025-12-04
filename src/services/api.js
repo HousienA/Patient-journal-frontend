@@ -1,10 +1,14 @@
-const API_BASE = '/api';
+// API service with environment-based URLs for cloud deployment
 
-const IMAGE_API_BASE = import.meta.env.VITE_IMAGE_API_URL || 'http://localhost:8084';
-
+// Get API URLs from environment variables with localhost fallbacks
+const CLINICAL_API_URL = import.meta.env.VITE_CLINICAL_API_URL ?? 'http://localhost:8082';
+const MESSAGING_API_URL = import.meta.env.VITE_MESSAGING_API_URL ?? 'http://localhost:8083';
+const SEARCH_API_URL = import.meta.env.VITE_SEARCH_API_URL ?? 'http://localhost:8085';
+const IMAGE_API_BASE = import.meta.env.VITE_IMAGE_API_URL ?? 'http://localhost:8084';
+const KEYCLOAK_URL = import.meta.env.VITE_KEYCLOAK_URL ?? 'http://localhost:8080';
 
 function getAccessToken() {
-    const key = `oidc.user:http://localhost:8080/realms/journal-realm:backend-service`;
+    const key = `oidc.user:${KEYCLOAK_URL}/realms/journal-realm:backend-service`;
     const stored = sessionStorage.getItem(key);
     if (stored) {
         try {
@@ -18,20 +22,18 @@ function getAccessToken() {
     return null;
 }
 
-async function apiFetch(endpoint, options = {}) {
+async function apiFetch(endpoint, options = {}, baseUrl = CLINICAL_API_URL) {
     const token = getAccessToken();
-
     const config = {
         ...options,
         headers: {
             'Content-Type': 'application/json',
-            // VIKTIGT: Skicka token som Bearer, inte X-Session-Token
             ...(token && { 'Authorization': `Bearer ${token}` }),
             ...options.headers,
         },
     };
 
-    const response = await fetch(`${API_BASE}${endpoint}`, config);
+    const response = await fetch(`${baseUrl}${endpoint}`, config);
 
     if (response.status === 401) {
         throw new Error('Unauthorized: Please login again');
@@ -42,23 +44,19 @@ async function apiFetch(endpoint, options = {}) {
         throw new Error(error.error || 'API request failed');
     }
 
-
     if (response.status === 204) return null;
-
     return response.json();
 }
 
-// Image API (Går till Image Service)
+// Image API (Goes to Image Service)
 async function imageApiFetch(endpoint, options = {}) {
     const token = getAccessToken();
-
     const config = {
         ...options,
         headers: {
-            // För bilduppladdning (FormData) ska man INTE sätta Content-Type manuellt,
-            // så vi kollar om body är FormData
-            ...(options.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
-            ...(token && { 'Authorization': `Bearer ${token}` }), // Om du lagt till auth i Node-tjänsten
+            // For image uploads (FormData), don't set Content-Type manually
+            ...(!(options.body instanceof FormData) && { 'Content-Type': 'application/json' }),
+            ...(token && { 'Authorization': `Bearer ${token}` }),
             ...options.headers,
         },
     };
@@ -73,150 +71,127 @@ async function imageApiFetch(endpoint, options = {}) {
     return response.json();
 }
 
-
-
-// Patient API (Går till Clinikal Service)
+// Patient API (Goes to Clinical Service)
 export const patientApi = {
-    getAll: () => apiFetch('/clinical/patients'),
-    getById: (id) => apiFetch(`/clinical/patients/${id}`),
-    create: (data) => apiFetch('/clinical/patients', { method: 'POST', body: JSON.stringify(data) }),
-    update: (id, data) => apiFetch(`/clinical/patients/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
-    delete: (id) => apiFetch(`/clinical/patients/${id}`, { method: 'DELETE' }),
-
+    getAll: () => apiFetch('/api/clinical/patients', {}, CLINICAL_API_URL),
+    getById: (id) => apiFetch(`/api/clinical/patients/${id}`, {}, CLINICAL_API_URL),
+    create: (data) => apiFetch('/api/clinical/patients', { method: 'POST', body: JSON.stringify(data) }, CLINICAL_API_URL),
+    update: (id, data) => apiFetch(`/api/clinical/patients/${id}`, { method: 'PUT', body: JSON.stringify(data) }, CLINICAL_API_URL),
+    delete: (id) => apiFetch(`/api/clinical/patients/${id}`, { method: 'DELETE' }, CLINICAL_API_URL),
 };
 
 // Conditions API
 export const conditionApi = {
-    getAll: () => apiFetch('/clinical/conditions'),
-    getById: (id) => apiFetch(`/clinical/conditions/${id}`),
-    getByPatientId: (patientId) => apiFetch(`/clinical/conditions/patient/${patientId}`),
-    create: (data) => apiFetch('/clinical/conditions', { method: 'POST', body: JSON.stringify(data) }),
-    update: (id, data) => apiFetch(`/clinical/conditions/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
-    delete: (id) => apiFetch(`/clinical/conditions/${id}`, { method: 'DELETE' }),
+    getAll: () => apiFetch('/api/clinical/conditions', {}, CLINICAL_API_URL),
+    getById: (id) => apiFetch(`/api/clinical/conditions/${id}`, {}, CLINICAL_API_URL),
+    getByPatientId: (patientId) => apiFetch(`/api/clinical/conditions/patient/${patientId}`, {}, CLINICAL_API_URL),
+    create: (data) => apiFetch('/api/clinical/conditions', { method: 'POST', body: JSON.stringify(data) }, CLINICAL_API_URL),
+    update: (id, data) => apiFetch(`/api/clinical/conditions/${id}`, { method: 'PUT', body: JSON.stringify(data) }, CLINICAL_API_URL),
+    delete: (id) => apiFetch(`/api/clinical/conditions/${id}`, { method: 'DELETE' }, CLINICAL_API_URL),
 };
 
 // Encounters API
 export const encounterApi = {
-    getAll: () => apiFetch('/clinical/encounters'),
-    getById: (id) => apiFetch(`/clinical/encounters/${id}`),
-    getByPatientId: (patientId) => apiFetch(`/clinical/encounters/patient/${patientId}`),
-    create: (data) => apiFetch('/clinical/encounters', { method: 'POST', body: JSON.stringify(data) }),
-    update: (id, data) => apiFetch(`/clinical/encounters/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
-    delete: (id) => apiFetch(`/clinical/encounters/${id}`, { method: 'DELETE' }),
+    getAll: () => apiFetch('/api/clinical/encounters', {}, CLINICAL_API_URL),
+    getById: (id) => apiFetch(`/api/clinical/encounters/${id}`, {}, CLINICAL_API_URL),
+    getByPatientId: (patientId) => apiFetch(`/api/clinical/encounters/patient/${patientId}`, {}, CLINICAL_API_URL),
+    create: (data) => apiFetch('/api/clinical/encounters', { method: 'POST', body: JSON.stringify(data) }, CLINICAL_API_URL),
+    update: (id, data) => apiFetch(`/api/clinical/encounters/${id}`, { method: 'PUT', body: JSON.stringify(data) }, CLINICAL_API_URL),
+    delete: (id) => apiFetch(`/api/clinical/encounters/${id}`, { method: 'DELETE' }, CLINICAL_API_URL),
 };
 
-// Messages API (Går till Massage Service)
-// VIKTIGT: Jag har ändrat endpointen till /messages för att matcha din Controller
+// Messages API (Goes to Messaging Service)
 export const messageApi = {
-    getAll: () => apiFetch('/messages'),
-    getById: (id) => apiFetch(`/messages/${id}`),
-    getByPatientId: (patientId) => apiFetch(`/messages/patient/${patientId}`),
-    getByPractitionerId: (practitionerId) => apiFetch(`/messages/practitioner/${practitionerId}`),
-    create: (data) => apiFetch('/messages', { method: 'POST', body: JSON.stringify(data) }),
-    // Denna endpoint fanns i din controller:
-    markAsRead: (id) => apiFetch(`/messages/${id}/read`, { method: 'PUT' }),
+    getAll: () => apiFetch('/api/messages', {}, MESSAGING_API_URL),
+    getById: (id) => apiFetch(`/api/messages/${id}`, {}, MESSAGING_API_URL),
+    getByPatientId: (patientId) => apiFetch(`/api/messages/patient/${patientId}`, {}, MESSAGING_API_URL),
+    getByPractitionerId: (practitionerId) => apiFetch(`/api/messages/practitioner/${practitionerId}`, {}, MESSAGING_API_URL),
+    create: (data) => apiFetch('/api/messages', { method: 'POST', body: JSON.stringify(data) }, MESSAGING_API_URL),
+    markAsRead: (id) => apiFetch(`/api/messages/${id}/read`, { method: 'PUT' }, MESSAGING_API_URL),
 };
 
 // Observations API
 export const observationApi = {
-    getAll: () => apiFetch('/clinical/observations'),
-    getById: (id) => apiFetch(`/clinical/observations/${id}`),
-    getByEncounterId: (encounterId) => apiFetch(`/clinical/observations/encounter/${encounterId}`),
-    create: (data) => apiFetch('/clinical/observations', { method: 'POST', body: JSON.stringify(data) }),
-    update: (id, data) => apiFetch(`/clinical/observations/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
-    delete: (id) => apiFetch(`/clinical/observations/${id}`, { method: 'DELETE' }),
+    getAll: () => apiFetch('/api/clinical/observations', {}, CLINICAL_API_URL),
+    getById: (id) => apiFetch(`/api/clinical/observations/${id}`, {}, CLINICAL_API_URL),
+    getByEncounterId: (encounterId) => apiFetch(`/api/clinical/observations/encounter/${encounterId}`, {}, CLINICAL_API_URL),
+    create: (data) => apiFetch('/api/clinical/observations', { method: 'POST', body: JSON.stringify(data) }, CLINICAL_API_URL),
+    update: (id, data) => apiFetch(`/api/clinical/observations/${id}`, { method: 'PUT', body: JSON.stringify(data) }, CLINICAL_API_URL),
+    delete: (id) => apiFetch(`/api/clinical/observations/${id}`, { method: 'DELETE' }, CLINICAL_API_URL),
 };
 
 // Practitioners API
 export const practitionerApi = {
-    getAll: () => apiFetch('/clinical/practitioners'),
-    getById: (id) => apiFetch(`/clinical/practitioners/${id}`),
-    create: (data) => apiFetch('/clinical/practitioners', { method: 'POST', body: JSON.stringify(data) }),
-    getPatients: (id) => apiFetch(`/clinical/practitioners/${id}/patients`),
+    getAll: () => apiFetch('/api/clinical/practitioners', {}, CLINICAL_API_URL),
+    getById: (id) => apiFetch(`/api/clinical/practitioners/${id}`, {}, CLINICAL_API_URL),
+    create: (data) => apiFetch('/api/clinical/practitioners', { method: 'POST', body: JSON.stringify(data) }, CLINICAL_API_URL),
+    getPatients: (id) => apiFetch(`/api/clinical/practitioners/${id}/patients`, {}, CLINICAL_API_URL),
     getEncounters: (id, date) => {
         const qs = date ? `?date=${date}` : '';
-        return apiFetch(`/clinical/practitioners/${id}/encounters${qs}`);
+        return apiFetch(`/api/clinical/practitioners/${id}/encounters${qs}`, {}, CLINICAL_API_URL);
     },
 };
 
 // Organizations & Locations API
 export const organizationApi = {
-    getAll: (search = '') => apiFetch(`/clinical/organizations${search ? `?q=${search}` : ''}`),
-    getById: (id) => apiFetch(`/clinical/organizations/${id}`),
-    create: (data) => apiFetch('/clinical/organizations', { method: 'POST', body: JSON.stringify(data) }),
-    update: (id, data) => apiFetch(`/clinical/organizations/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
-    delete: (id) => apiFetch(`/clinical/organizations/${id}`, { method: 'DELETE' }),
+    getAll: (search = '') => apiFetch(`/api/clinical/organizations${search ? `?q=${search}` : ''}`, {}, CLINICAL_API_URL),
+    getById: (id) => apiFetch(`/api/clinical/organizations/${id}`, {}, CLINICAL_API_URL),
+    create: (data) => apiFetch('/api/clinical/organizations', { method: 'POST', body: JSON.stringify(data) }, CLINICAL_API_URL),
+    update: (id, data) => apiFetch(`/api/clinical/organizations/${id}`, { method: 'PUT', body: JSON.stringify(data) }, CLINICAL_API_URL),
+    delete: (id) => apiFetch(`/api/clinical/organizations/${id}`, { method: 'DELETE' }, CLINICAL_API_URL),
 };
 
 export const locationApi = {
     getAll: (organizationId) => {
         const url = organizationId
-            ? `/clinical/locations?organizationId=${organizationId}`
-            : '/clinical/locations';
-        return apiFetch(url);
+            ? `/api/clinical/locations?organizationId=${organizationId}`
+            : '/api/clinical/locations';
+        return apiFetch(url, {}, CLINICAL_API_URL);
     },
-    getById: (id) => apiFetch(`/clinical/locations/${id}`),
+    getById: (id) => apiFetch(`/api/clinical/locations/${id}`, {}, CLINICAL_API_URL),
 };
 
 export const profileApi = {
-    exists: () => apiFetch('/clinical/profile/exists'),
+    exists: () => apiFetch('/api/clinical/profile/exists', {}, CLINICAL_API_URL),
 };
 
+export const onboardingApi = {
+    completePatient: (data) => apiFetch('/api/clinical/onboarding/patient', { method: 'POST', body: JSON.stringify(data) }, CLINICAL_API_URL),
+    completePractitioner: (data) => apiFetch('/api/clinical/onboarding/practitioner', { method: 'POST', body: JSON.stringify(data) }, CLINICAL_API_URL),
+};
 
-// Image API (Går till Image Service)
+// Image API (Goes to Image Service)
 export const imageApi = {
-    // Ladda upp en ny bild
-    // OBS: data ska vara ett FormData-objekt
     upload: (formData) => imageApiFetch('/images/upload', {
         method: 'POST',
         body: formData
     }),
-
-    // Hämta bild-metadata + URL
     getById: (id) => imageApiFetch(`/images/${id}`),
-
-    // Spara annoteringar (ritningar)
-    saveAnnotations: (id, annotations) => imageApiFetch(`/images/${id}/annotate`, {
+    saveAnnotations: (id, annotations, texts) => imageApiFetch(`/images/${id}/annotate`, {
         method: 'PUT',
-        body: JSON.stringify({ annotations })
+        body: JSON.stringify({ annotations, texts })
     }),
-
-    // Hämta alla bilder för en patient
     getByPatientId: (patientId) => imageApiFetch(`/images/patient/${patientId}`),
-
-    // Hämta alla bilder för ett vårdmöte (Encounter)
-    // OBS: Din Node.js-kod måste ha denna endpoint.
-    // Om du inte skapat den i Node än, kan du filtrera patientens bilder i frontend istället,
-    // men det är snyggare att ha en endpoint:
     getByEncounterId: (encounterId) => imageApiFetch(`/images/encounter/${encounterId}`),
 };
 
-// Quarkus Search API
+// Search API (Goes to Search Service - Quarkus)
 export const searchApi = {
-    // Search patients with multiple filters
     searchPatients: (filters = {}) => {
         const params = new URLSearchParams();
         if (filters.name) params.append('name', filters.name);
         if (filters.pnr) params.append('pnr', filters.pnr);
         if (filters.condition) params.append('condition', filters.condition);
-
         const qs = params.toString();
-        return apiFetch(`/search/patients${qs ? `?${qs}` : ''}`);
+        return apiFetch(`/api/search/patients${qs ? `?${qs}` : ''}`, {}, SEARCH_API_URL);
     },
-
-    // Search practitioners
     searchPractitioners: (name) => {
         const qs = name ? `?name=${encodeURIComponent(name)}` : '';
-        return apiFetch(`/search/practitioners${qs}`);
+        return apiFetch(`/api/search/practitioners${qs}`, {}, SEARCH_API_URL);
     },
-
-    // Get practitioner's patients
-    getPractitionerPatients: (practitionerId) =>
-        apiFetch(`/search/practitioners/${practitionerId}/patients`),
-
-    // Get practitioner's encounters
+    getPractitionerPatients: (practitionerId) => apiFetch(`/api/search/practitioners/${practitionerId}/patients`, {}, SEARCH_API_URL),
     getPractitionerEncounters: (practitionerId, date) => {
         const qs = date ? `?date=${date}` : '';
-        return apiFetch(`/search/practitioners/${practitionerId}/encounters${qs}`);
+        return apiFetch(`/api/search/practitioners/${practitionerId}/encounters${qs}`, {}, SEARCH_API_URL);
     },
 };
