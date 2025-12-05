@@ -86,6 +86,11 @@ export default function ImageEditor({ imageId, onSave }) {
         }
     };
 
+    const getProxiedUrl = (url) => {
+        if (!url) return '';
+        return url.replace('http://localhost:8084', '');
+    };
+
     if (!imageData) return <div>Laddar bild...</div>;
 
     return (
@@ -141,7 +146,7 @@ export default function ImageEditor({ imageId, onSave }) {
             >
                 {/* Bakgrundsbilden */}
                 <img
-                    src={imageData.url}
+                    src={getProxiedUrl(imageData.url)}
                     alt="Original"
                     style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'contain', zIndex: 1, userSelect: 'none' }}
                 />

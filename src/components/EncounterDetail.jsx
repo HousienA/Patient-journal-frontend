@@ -57,6 +57,13 @@ export default function EncounterDetail() {
         }
     };
 
+    const getProxiedUrl = (url) => {
+        if (!url) return '';
+        // Replaces 'http://localhost:8084' with nothing, making it a relative path
+        // e.g., "/images/blob/..." which Nginx handles correctly
+        return url.replace('http://localhost:8084', '');
+    };
+
     if (loading) return <div className="loading">Laddar vårdmöte...</div>;
     if (error) return <div className="error-message">{error}</div>;
     if (!encounter) return <div className="error-message">Vårdmöte hittades inte</div>;
@@ -189,7 +196,7 @@ export default function EncounterDetail() {
                             <div key={img.id} className="image-card"
                                  style={{border: '1px solid #eee', padding: '10px', borderRadius: '8px'}}>
                                 <img
-                                    src={img.url}
+                                    src={getProxiedUrl(img.url)}
                                     alt="Klinisk bild"
                                     style={{width: '100%', height: '150px', objectFit: 'cover', borderRadius: '4px'}}
                                 />
