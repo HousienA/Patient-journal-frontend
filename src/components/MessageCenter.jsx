@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { messageApi, patientApi, practitionerApi } from '../services/api';
+import { messageApi, patientApi, practitionerApi, profileApi } from '../services/api'; // Added profileApi
 import { useAuth } from '../contexts/AuthContext';
 // import './MessageCenter.css';
 
@@ -18,8 +18,12 @@ export default function MessageCenter() {
     });
 
     const [myPatientId, setMyPatientId] = useState(null);
-    const [myPractitionerId, setMyPractitionerId] = useState(null); // Stores the logged-in doctor's ID
+    const [myPractitionerId, setMyPractitionerId] = useState(null);
     const [practitioners, setPractitioners] = useState([]);
+
+    // New: Store a map of PatientID -> PatientName for the Doctor view
+    const [patientNames, setPatientNames] = useState({});
+
     const [loading, setLoading] = useState(true);
     const [sending, setSending] = useState(false);
     const [error, setError] = useState('');
@@ -37,36 +41,53 @@ export default function MessageCenter() {
             setPractitioners(Array.isArray(practitionerList) ? practitionerList : []);
 
             if (user.role === 'PATIENT') {
-                // 1. Find Patient-ID for logged in user
-                const allPatients = await patientApi.getAll();
-                const myPatient = Array.isArray(allPatients)
-                    ? allPatients.find((p) => p.authId === user.id || p.userId === user.id)
-                    : null;
+                // --- FIX FOR 500 ERROR ---
+                // Instead of fetching ALL patients (which crashes/is forbidden),
+                // we fetch only OUR OWN profile.
+                const profileResponse = await profileApi.exists();
 
-                if (myPatient) {
-                    setMyPatientId(myPatient.id);
-                    // Get messages for this patient
-                    const myMessages = await messageApi.getByPatientId(myPatient.id);
+                if (profileResponse && profileResponse.exists && profileResponse.profileType === 'PATIENT') {
+                    const myId = profileResponse.profile.id;
+                    setMyPatientId(myId);
+
+                    // Get messages for me
+                    const myMessages = await messageApi.getByPatientId(myId);
                     setMessages(Array.isArray(myMessages) ? myMessages : []);
                 } else {
-                    setMessages([]); // No profile found
+                    setMessages([]);
+                    setError("Kunde inte hitta din patientprofil.");
                 }
 
             } else if (user.role === 'DOCTOR') {
-                // 2. Find Practitioner-ID for logged in doctor
+                // 1. Identify the Doctor
                 const myPractitioner = Array.isArray(practitionerList)
                     ? practitionerList.find((p) => p.authId === user.id || p.userId === user.id)
                     : null;
 
                 if (myPractitioner) {
-                    setMyPractitionerId(myPractitioner.id); // <--- Save this ID for sending messages later
+                    setMyPractitionerId(myPractitioner.id);
                     const myMessages = await messageApi.getByPractitionerId(myPractitioner.id);
                     setMessages(Array.isArray(myMessages) ? myMessages : []);
+
+                    // 2. Fetch Patients to show Names instead of IDs
+                    try {
+                        const allPatients = await patientApi.getAll();
+                        if (Array.isArray(allPatients)) {
+                            const nameMap = {};
+                            allPatients.forEach(p => {
+                                nameMap[p.id] = p.fullName;
+                            });
+                            setPatientNames(nameMap);
+                        }
+                    } catch (e) {
+                        console.warn("Could not load patient names for mapping", e);
+                    }
+
                 } else {
                     setMessages([]);
                 }
             } else {
-                // STAFF - Show all messages
+                // STAFF
                 const data = await messageApi.getAll();
                 setMessages(Array.isArray(data) ? data : []);
             }
@@ -85,7 +106,6 @@ export default function MessageCenter() {
         setSending(true);
 
         try {
-            // Determine Patient ID
             const patientIdToUse =
                 user.role === 'PATIENT' ? myPatientId : parseInt(newMessage.patientId, 10);
 
@@ -106,9 +126,6 @@ export default function MessageCenter() {
                 return;
             }
 
-            // Determine Practitioner ID
-            // If Patient: use the selected receiver from dropdown
-            // If Doctor: use MY own ID
             let practitionerIdToUse = null;
             let subjectToSend = newMessage.subject.trim();
 
@@ -119,13 +136,10 @@ export default function MessageCenter() {
                     return;
                 }
                 practitionerIdToUse = parseInt(newMessage.receiverPractitionerId, 10);
-
-                // Add receiver name to subject for clarity
                 const receiver = practitioners.find((p) => p.id === practitionerIdToUse);
                 const receiverName = receiver?.fullName || 'okänd läkare';
                 subjectToSend = `Till ${receiverName}: ${subjectToSend}`;
             } else {
-                // I am a Doctor sending a message
                 practitionerIdToUse = myPractitionerId;
             }
 
@@ -133,14 +147,13 @@ export default function MessageCenter() {
 
             await messageApi.create({
                 patientId: patientIdToUse,
-                practitionerId: practitionerIdToUse, // <--- FIXED: Now uses the variable, not null
+                practitionerId: practitionerIdToUse,
                 content: finalContent,
                 senderType: user.role === 'PATIENT' ? 'PATIENT' : 'PRACTITIONER',
                 sentAt: new Date().toISOString(),
                 isRead: false,
             });
 
-            // Reset form and reload list
             setNewMessage({
                 patientId: '',
                 subject: '',
@@ -178,6 +191,8 @@ export default function MessageCenter() {
                 </button>
             </div>
 
+            {error && <div className="error-message">{error}</div>}
+
             {showNewMessage && (
                 <div className="new-message-form">
                     <h2>
@@ -187,7 +202,6 @@ export default function MessageCenter() {
                     </h2>
 
                     <form onSubmit={handleSend}>
-                        {/* receiver selection for patients */}
                         {user.role === 'PATIENT' && (
                             <div className="form-group">
                                 <label htmlFor="receiver">
@@ -214,7 +228,6 @@ export default function MessageCenter() {
                             </div>
                         )}
 
-                        {/* Only DOCTOR/STAFF/ADMIN need to type patientId */}
                         {user.role !== 'PATIENT' && (
                             <div className="form-group">
                                 <label>Patient-ID</label>
@@ -238,7 +251,7 @@ export default function MessageCenter() {
                                 onChange={(e) =>
                                     setNewMessage({ ...newMessage, subject: e.target.value })
                                 }
-                                placeholder="T.ex. Fråga om recept, Provsvar..."
+                                placeholder="T.ex. Fråga om recept..."
                                 required
                             />
                         </div>
@@ -262,7 +275,7 @@ export default function MessageCenter() {
                     </form>
                 </div>
             )}
-            {/* Lista meddelanden */}
+
             <div className="message-list">
                 <h2>
                     {user.role === 'PATIENT' ? 'Mina meddelanden' : 'Alla meddelanden'} ({messages.length})
@@ -284,7 +297,6 @@ export default function MessageCenter() {
                                     key={msg.id}
                                     className={`message-card ${!msg.isRead ? 'unread' : ''}`}
                                     style={{marginBottom: '16px', cursor: 'pointer'}}
-
                                     onClick={() => navigate(`/messages/${msg.id}`)}
                                 >
                                     <div className="message-header-card">
@@ -292,26 +304,35 @@ export default function MessageCenter() {
                                         <div className="message-badges">
                                             {!msg.isRead && <span className="unread-badge">Nytt</span>}
                                             {user.role !== 'PATIENT' && (
-                                                <span className="patient-badge">Patient #{msg.patientId}</span>
+                                                // FIX: Show Patient Name if available, otherwise ID
+                                                <span className="patient-badge">
+                                                    {patientNames[msg.patientId]
+                                                        ? `${patientNames[msg.patientId]} (#${msg.patientId})`
+                                                        : `Patient #${msg.patientId}`}
+                                                </span>
                                             )}
                                         </div>
                                     </div>
                                     <p className="message-content">{msg.content}</p>
                                     <div className="message-footer">
-                  <span className="sender">
-                    {user.role === 'PATIENT' && msg.senderName === user.username
-                        ? '🔵 Du, '
-                        : `Från: ${msg.senderName}, `}
-                  </span>
+                                      <span className="sender">
+                                        {/* Logic to handle undefined senderName */}
+                                          {msg.senderType === 'PATIENT' && user.role === 'PATIENT'
+                                              ? '🔵 Du'
+                                              : msg.senderType === 'PRACTITIONER' && user.role === 'DOCTOR'
+                                                  ? '🔵 Du'
+                                                  : `Från: ${msg.senderName || (msg.senderType === 'PATIENT' ? 'Patienten' : 'Läkaren')}`
+                                          }
+                                      </span>
                                         <span className="date">
-                    {new Date(msg.sentAt).toLocaleDateString('sv-SE', {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                    })}
-                  </span>
+                                        {new Date(msg.sentAt).toLocaleDateString('sv-SE', {
+                                            year: 'numeric',
+                                            month: 'long',
+                                            day: 'numeric',
+                                            hour: '2-digit',
+                                            minute: '2-digit'
+                                        })}
+                                      </span>
                                     </div>
                                     <div className="click-hint">
                                         💬 Klicka för att visa konversation och svara
