@@ -302,9 +302,8 @@ export default function MessageCenter() {
                                     <div className="message-header-card">
                                         <h3>{msg.subject}</h3>
                                         <div className="message-badges">
-                                            {!msg.isRead && <span className="unread-badge">Nytt</span>}
+                                            {!msg.isRead && <span className="unread-badge"></span>}
                                             {user.role !== 'PATIENT' && (
-                                                // FIX: Show Patient Name if available, otherwise ID
                                                 <span className="patient-badge">
                                                     {patientNames[msg.patientId]
                                                         ? `${patientNames[msg.patientId]} (#${msg.patientId})`
@@ -318,9 +317,9 @@ export default function MessageCenter() {
                                       <span className="sender">
                                         {/* Logic to handle undefined senderName */}
                                           {msg.senderType === 'PATIENT' && user.role === 'PATIENT'
-                                              ? '🔵 Du'
+                                              ? '🔵 Du '
                                               : msg.senderType === 'PRACTITIONER' && user.role === 'DOCTOR'
-                                                  ? '🔵 Du'
+                                                  ? '🔵 Du '
                                                   : `Från: ${msg.senderName || (msg.senderType === 'PATIENT' ? 'Patienten' : 'Läkaren')}`
                                           }
                                       </span>

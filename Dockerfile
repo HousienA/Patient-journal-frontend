@@ -5,7 +5,7 @@ COPY package*.json ./
 RUN npm ci --legacy-peer-deps
 COPY . .
 
-# 1. Keep these empty to force the app to use relative paths (e.g. /api/clinical)
+# Keep these empty to force the app to use relative paths
 ENV VITE_CLINICAL_API_URL=
 ENV VITE_MESSAGING_API_URL=
 ENV VITE_SEARCH_API_URL=
