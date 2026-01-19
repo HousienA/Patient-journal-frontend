@@ -152,7 +152,6 @@ export default function MessageCenter() {
                 content: finalContent,
                 subject: subjectToSend,
                 senderType: user.role === 'PATIENT' ? 'PATIENT' : 'PRACTITIONER',
-                sentAt: new Date().toISOString(),
                 isRead: false,
             };
 
@@ -160,13 +159,14 @@ export default function MessageCenter() {
             await messageApi.create(payload);
 
             // 2. OPTIMISTIC UPDATE: Manually add to the list so you see it instantly
-            const optimisticMessage = {
+            const tempMessage = {
                 ...payload,
-                id: Date.now(), // Temporary ID so React doesn't complain
+                id: Date.now(), // Temporary ID
+                sentAt: new Date().toISOString(), // Show current time
                 senderName: user.username || 'Du'
             };
 
-            setMessages(prev => [...prev, optimisticMessage]);
+            setMessages(prev => [...prev, tempMessage]);
 
             // Reset form
             setNewMessage({
