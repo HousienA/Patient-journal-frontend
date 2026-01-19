@@ -145,14 +145,20 @@ export default function MessageCenter() {
 
             const finalContent = `Ämne: ${subjectToSend}\n\n${newMessage.content.trim()}`;
 
-            await messageApi.create({
+            const payload = {
                 patientId: patientIdToUse,
                 practitionerId: practitionerIdToUse,
                 content: finalContent,
+
+                // ADD THIS LINE:
+                subject: subjectToSend,
+
                 senderType: user.role === 'PATIENT' ? 'PATIENT' : 'PRACTITIONER',
                 sentAt: new Date().toISOString(),
                 isRead: false,
-            });
+            };
+
+            await messageApi.create(payload);
 
             setNewMessage({
                 patientId: '',
