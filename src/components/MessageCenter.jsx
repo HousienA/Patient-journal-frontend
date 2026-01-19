@@ -145,21 +145,30 @@ export default function MessageCenter() {
 
             const finalContent = `Ämne: ${subjectToSend}\n\n${newMessage.content.trim()}`;
 
+            // Create the payload
             const payload = {
                 patientId: patientIdToUse,
                 practitionerId: practitionerIdToUse,
                 content: finalContent,
-
-                // ADD THIS LINE:
                 subject: subjectToSend,
-
                 senderType: user.role === 'PATIENT' ? 'PATIENT' : 'PRACTITIONER',
                 sentAt: new Date().toISOString(),
                 isRead: false,
             };
 
+            // 1. Send to backend (This returns 202 Accepted immediately)
             await messageApi.create(payload);
 
+            // 2. OPTIMISTIC UPDATE: Manually add to the list so you see it instantly
+            const optimisticMessage = {
+                ...payload,
+                id: Date.now(), // Temporary ID so React doesn't complain
+                senderName: user.username || 'Du'
+            };
+
+            setMessages(prev => [...prev, optimisticMessage]);
+
+            // Reset form
             setNewMessage({
                 patientId: '',
                 subject: '',
@@ -167,7 +176,12 @@ export default function MessageCenter() {
                 receiverPractitionerId: '',
             });
             setShowNewMessage(false);
-            await loadData();
+
+            // 3. (Optional) Fetch real data after a short delay to get the real DB ID
+            setTimeout(() => {
+                loadData();
+            }, 2000);
+
         } catch (err) {
             console.error('Error sending message:', err);
             setError(err.message || 'Kunde inte skicka meddelande');
